@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Spot Finder & Live Crew Chat</title>
-  <!-- Paho MQTT WebSocket Client library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <style>
     * {
@@ -84,7 +83,6 @@
       color: #f8fafc;
       font-size: 0.78rem;
       outline: none;
-      transition: border-color 0.2s;
     }
 
     .input-dark:focus { border-color: #38bdf8; }
@@ -146,6 +144,7 @@
       border: none;
     }
 
+    /* Modals */
     #baro-modal, #tutorial-modal, #trip-modal, #catch-modal, #logbook-modal, #channel-create-modal {
       display: none;
       position: fixed;
@@ -407,7 +406,6 @@
       text-decoration: underline;
     }
 
-    /* STRICT AUTH OVERLAY */
     #auth-overlay {
       position: absolute;
       inset: 0;
@@ -457,10 +455,7 @@
       font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
     }
-
-    .auth-btn:hover { background: #0062cc; }
 
     #auth-error {
       font-size: 0.72rem;
@@ -575,7 +570,6 @@
 
     iframe { width: 100%; height: 100%; border: none; }
 
-    /* Mobile Bottom Tab Bar */
     #mobile-nav-bar {
       display: none;
       background: #18181b;
@@ -689,15 +683,15 @@
         <button class="btn-link" onclick="handleExplicitLogout()">Log Out 🔒</button>
       </div>
 
-      <!-- MANDATORY LOGIN: NAME + USER PASSWORD + ROOM PASSCODE (ZERO LEAKS) -->
+      <!-- AUTH OVERLAY -->
       <div id="auth-overlay">
         <div class="auth-box">
           <h2 id="auth-title-label">Angler Sign In</h2>
-          <p id="auth-room-hint">Type your handle, personal password, and room passcode.</p>
+          <p id="auth-room-hint">Enter your name, account password, and room code.</p>
           <input type="text" id="auth-username" class="auth-input" placeholder="Your Name / Handle" autocomplete="off" />
-          <input type="password" id="auth-userpass" class="auth-input" placeholder="Your Account Password" autocomplete="new-password" />
+          <input type="password" id="auth-userpass" class="auth-input" placeholder="Account Password" autocomplete="new-password" />
           <input type="password" id="auth-roompass" class="auth-input" placeholder="Room Passcode" autocomplete="new-password" />
-          <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Unlock &amp; Enter Chat 🎣</button>
+          <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Unlock Room 🎣</button>
           <div id="auth-error"></div>
         </div>
       </div>
@@ -731,7 +725,7 @@
     </button>
   </nav>
 
-  <!-- KAI NEW ROOM CREATOR MODAL -->
+  <!-- KAI NEW ROOM CREATOR -->
   <div id="channel-create-modal">
     <div class="modal-content" style="border: 2px solid #7c3aed;">
       <div class="modal-header">
@@ -743,7 +737,7 @@
         
         <div class="form-group">
           <label>Group Chat Name</label>
-          <input type="text" id="new-channel-name" class="input-dark" placeholder="Channel Name" />
+          <input type="text" id="new-channel-name" class="input-dark" placeholder="e.g. Saltwater Crew, Lake Hodges" />
         </div>
 
         <div class="form-group">
@@ -759,7 +753,7 @@
     </div>
   </div>
 
-  <!-- CATCH LOGBOOK MODAL -->
+  <!-- CATCH LOGBOOK -->
   <div id="logbook-modal">
     <div class="modal-content" style="border: 2px solid #0ea5e9;">
       <div class="modal-header">
@@ -776,7 +770,7 @@
     </div>
   </div>
 
-  <!-- LOG A CATCH MODAL -->
+  <!-- LOG A CATCH -->
   <div id="catch-modal">
     <div class="modal-content" style="border: 2px solid #38bdf8;">
       <div class="modal-header">
@@ -842,7 +836,7 @@
     </div>
   </div>
 
-  <!-- PLAN A TRIP MODAL -->
+  <!-- PLAN A TRIP (WITH NATIVE TEXT/iMESSAGE SHARE BUTTON) -->
   <div id="trip-modal">
     <div class="modal-content" style="border: 2px solid #059669;">
       <div class="modal-header">
@@ -850,7 +844,7 @@
         <button class="modal-close-btn" onclick="closeTripModal()">✕</button>
       </div>
       <div class="modal-body">
-        <p>Coordinate a meetup and broadcast the details straight into the group chat.</p>
+        <p>Coordinate a meetup and broadcast to the chat or send directly via SMS/iMessage.</p>
 
         <div class="form-group">
           <label>Spot / Body of Water</label>
@@ -884,15 +878,16 @@
           <input type="text" id="trip-notes" class="input-dark" placeholder="e.g. Texas rig soft plastics" />
         </div>
 
-        <div style="display:flex; gap:8px; margin-top:10px;">
+        <div style="display:flex; gap:6px; margin-top:10px;">
           <button class="btn" style="flex:1; background:#059669;" onclick="broadcastTrip()">Broadcast to Chat 📢</button>
+          <button class="btn" style="background:#2563eb;" onclick="shareTripViaSMS()" title="Text via iMessage/SMS">💬 Text Contacts</button>
           <button class="btn" style="background:#334155;" onclick="closeTripModal()">Cancel</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- TUTORIAL MODAL -->
+  <!-- TUTORIAL -->
   <div id="tutorial-modal">
     <div class="modal-content" style="border: 2px solid #38bdf8;">
       <div class="modal-header">
@@ -901,10 +896,9 @@
       </div>
       <div class="modal-body">
         <ul>
-          <li><strong>Personal Account Protection:</strong> The first time you sign in with a handle, you set your own personal password. No one else can use your name without knowing your password!</li>
-          <li><strong>Room Passcode:</strong> Enter the designated passcode for the room you want to enter.</li>
-          <li><strong>Zero Saved Logins:</strong> For strict privacy and multi-user security, the app never auto-logs in when opening or refreshing.</li>
-          <li><strong>Mobile vs PC:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side!</li>
+          <li><strong>Text &amp; iMessage Share:</strong> Tap 💬 <em>Text Contacts</em> on any trip plan or catch to share instantly with native iOS iMessage or Android SMS!</li>
+          <li><strong>Zero Saved Logins:</strong> Credentials are never stored on disk. When you close the app or browser, the session locks immediately.</li>
+          <li><strong>Mobile Mode:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side!</li>
         </ul>
         <p style="text-align: center; margin-top: 8px;">
           <button class="btn" style="padding: 8px 20px; font-size: 0.9rem;" onclick="closeTutorialModal()">Let's Fish! 🎣</button>
@@ -913,7 +907,6 @@
     </div>
   </div>
 
-  <!-- BAROMETER GUIDE MODAL -->
   <div id="baro-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -955,7 +948,7 @@
     const seenMsgIds = new Set();
     const clientId = 'fish_scout_' + Math.random().toString(16).substring(2, 10);
 
-    // RAM-ONLY AUTHENTICATION STATE
+    // RAM-ONLY CREDENTIALS (WIPED UPON PAGE CLOSE OR REFRESH)
     let currentActiveUser = null;
     let unlockedRoomsInRAM = new Set();
     let authLockoutUntil = 0;
@@ -1008,6 +1001,58 @@
           navigator.vibrate([120, 60, 120]);
         }
       } catch (e) {}
+    }
+
+    // ==========================================
+    // NATIVE SMS & iMESSAGE SHARING ENGINE
+    // ==========================================
+    function shareContentViaSMS(title, text) {
+      const sharePayload = `${title}\n\n${text}\n\nSpot Finder: ${window.location.href}`;
+
+      if (navigator.share) {
+        navigator.share({
+          title: title,
+          text: sharePayload
+        }).catch((err) => {
+          if (err.name !== 'AbortError') copyToClipboardFallback(sharePayload);
+        });
+        return;
+      }
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const separator = isIOS ? '&' : '?';
+      const smsUrl = `sms:${separator}body=${encodeURIComponent(sharePayload)}`;
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        window.location.href = smsUrl;
+      } else {
+        copyToClipboardFallback(sharePayload);
+      }
+    }
+
+    function copyToClipboardFallback(payloadText) {
+      navigator.clipboard.writeText(payloadText).then(() => {
+        showToast("📋 Copied to clipboard! Ready to paste into SMS.");
+      }).catch(() => {
+        alert("Text:\n\n" + payloadText);
+      });
+    }
+
+    function shareTripViaSMS() {
+      const spot = document.getElementById('trip-spot').value.trim() || 'Fishing Spot';
+      const date = document.getElementById('trip-date').value;
+      const time = document.getElementById('trip-time').value;
+      const target = document.getElementById('trip-target').value.trim() || 'Fish';
+      const cost = document.getElementById('trip-cost').value.trim() || 'Free';
+
+      const message = `🎣 Fishing Meetup at ${spot}!\n📅 ${date} at ${time}\n🎯 Target: ${target}\n💵 Cost: ${cost}`;
+      shareContentViaSMS('Fishing Trip Plan', message);
+    }
+
+    function shareCatchViaSMS(species, weight, spot) {
+      const message = `Check out this catch landed on Spot Finder:\n🐟 ${species} (${weight})\n📍 Caught at: ${spot}`;
+      shareContentViaSMS('Catch Logged', message);
     }
 
     const permanentIntroMessages = [
@@ -1064,7 +1109,7 @@
         pendingSwitchTopic = targetTopic;
         document.getElementById('auth-overlay').style.display = 'flex';
         document.getElementById('auth-title-label').textContent = `Unlock ${channels[targetTopic]?.name || 'Chat'}`;
-        document.getElementById('auth-room-hint').textContent = `Enter your account password and this room's passcode.`;
+        document.getElementById('auth-room-hint').textContent = `Enter account password and room passcode.`;
         document.getElementById('auth-username').value = currentActiveUser || '';
         document.getElementById('auth-userpass').value = '';
         document.getElementById('auth-roompass').value = '';
@@ -1079,7 +1124,6 @@
       renderSavedHistory(currentTopic);
     }
 
-    // STRICT AUTHENTICATION: Zero Passcode Leakage
     function handleAuthSubmit() {
       if (Date.now() < authLockoutUntil) {
         const waitSecs = Math.ceil((authLockoutUntil - Date.now()) / 1000);
@@ -1094,17 +1138,16 @@
       errBox.textContent = '';
 
       if (!nameInput || !userPassInput || !roomPassInput) {
-        errBox.textContent = 'Please enter Name, Account Password, and Room Passcode.';
+        errBox.textContent = 'All fields required (Name, Account Password, Room Code).';
         return;
       }
 
       const lowerName = nameInput.toLowerCase();
       const userVault = JSON.parse(localStorage.getItem('sec_user_vault') || '{}');
 
-      // 1. Verify / Set Personal Account Password
       if (userVault[lowerName]) {
         if (userVault[lowerName] !== userPassInput) {
-          errBox.textContent = 'Incorrect credentials. Access denied.';
+          errBox.textContent = 'Incorrect password for this user.';
           authLockoutUntil = Date.now() + 3000;
           playBeep(220, 'sawtooth', 0.25);
           return;
@@ -1114,19 +1157,17 @@
         localStorage.setItem('sec_user_vault', JSON.stringify(userVault));
       }
 
-      // 2. Verify Room Passcode
       const targetRoomTopic = pendingSwitchTopic || currentTopic;
       const expectedPass = channels[targetRoomTopic]?.passcode || 'GV24';
 
       if (roomPassInput !== expectedPass) {
-        errBox.textContent = 'Incorrect credentials. Access denied.';
+        errBox.textContent = 'Incorrect room passcode. Access denied.';
         authLockoutUntil = Date.now() + 3000;
         playBeep(220, 'sawtooth', 0.25);
         document.getElementById('auth-roompass').value = '';
         return;
       }
 
-      // 3. Store authentication in RAM only
       currentActiveUser = nameInput;
       unlockedRoomsInRAM.add(targetRoomTopic);
 
@@ -1169,7 +1210,7 @@
       document.getElementById('display-username').textContent = 'Not Signed In';
       document.getElementById('kai-add-room-btn').style.display = 'none';
       document.getElementById('auth-title-label').textContent = 'Angler Sign In';
-      document.getElementById('auth-room-hint').textContent = 'Type your handle, personal password, and room passcode.';
+      document.getElementById('auth-room-hint').textContent = 'Enter your name, account password, and room code.';
       document.getElementById('auth-overlay').style.display = 'flex';
       renderSavedHistory(currentTopic);
       if (noticeMsg) showToast("🔒 Locked");
@@ -1374,7 +1415,10 @@
             <span>⚖️ Weight: ${escapeHtml(c.weight)}</span>
             <span>📍 Spot: ${escapeHtml(c.spot)}</span>
             ${c.lure ? `<span>🪱 Lure: ${escapeHtml(c.lure)}</span>` : ''}
-            <span style="color:#64748b; font-size:0.68rem; margin-top:2px;">📅 Landed on ${escapeHtml(c.date)}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+              <span style="color:#64748b; font-size:0.68rem;">📅 ${escapeHtml(c.date)}</span>
+              <button class="btn" style="padding:2px 6px; font-size:0.65rem; background:#2563eb;" onclick="shareCatchViaSMS('${escapeHtml(c.species)}', '${escapeHtml(c.weight)}', '${escapeHtml(c.spot)}')">💬 Share</button>
+            </div>
           </div>
         `;
         container.appendChild(card);
@@ -1713,10 +1757,6 @@
     });
 
     document.getElementById('auth-roompass').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleAuthSubmit();
-    });
-
-    document.getElementById('auth-userpass').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAuthSubmit();
     });
 
