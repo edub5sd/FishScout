@@ -97,6 +97,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .input-dark {
@@ -125,6 +126,9 @@
       cursor: pointer;
       transition: background 0.2s;
       white-space: nowrap;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
     }
 
     .btn:hover { background: #0062cc; }
@@ -174,7 +178,7 @@
     }
 
     /* Modals */
-    #baro-modal, #tutorial-modal, #trip-modal, #catch-modal, #logbook-modal {
+    #baro-modal, #tutorial-modal, #trip-modal, #catch-modal, #logbook-modal, #reminder-modal {
       display: none;
       position: fixed;
       inset: 0;
@@ -190,7 +194,7 @@
       background: #182232;
       border: 1px solid #334155;
       border-radius: 12px;
-      max-width: 540px;
+      max-width: 580px;
       width: 100%;
       padding: 24px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
@@ -301,7 +305,32 @@
       object-fit: cover;
     }
 
-    /* Logbook Entries Cards */
+    /* Logbook Switcher Tabs */
+    .logbook-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .logbook-tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .logbook-tab-btn.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
+    }
+
     .logbook-grid {
       display: flex;
       flex-direction: column;
@@ -319,8 +348,8 @@
     }
 
     .logbook-card img {
-      width: 90px;
-      height: 90px;
+      width: 95px;
+      height: 95px;
       object-fit: cover;
       border-radius: 6px;
       border: 1px solid #334155;
@@ -336,7 +365,7 @@
 
     .logbook-details strong {
       color: #38bdf8;
-      font-size: 0.92rem;
+      font-size: 0.95rem;
     }
 
     .logbook-empty {
@@ -344,6 +373,19 @@
       padding: 30px 10px;
       color: #64748b;
       font-size: 0.85rem;
+    }
+
+    #reminders-bar {
+      display: none;
+      background: #1e1b4b;
+      border-bottom: 1px solid #4338ca;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      color: #c7d2fe;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      z-index: 8;
     }
 
     .guide-table {
@@ -622,6 +664,13 @@
       padding: 10px 12px;
     }
 
+    .bubble.reminder-card {
+      background: linear-gradient(135deg, #4338ca, #6366f1) !important;
+      border: 1px solid #a5b4fc;
+      box-shadow: 0 2px 12px rgba(99, 102, 241, 0.4);
+      padding: 10px 12px;
+    }
+
     .catch-photo {
       width: 100%;
       border-radius: 8px;
@@ -702,6 +751,32 @@
       border: none;
     }
 
+    #alert-banner-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 250;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .alert-card {
+      background: #1e1b4b;
+      border: 2px solid #818cf8;
+      border-radius: 14px;
+      padding: 24px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(99, 102, 241, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
     #game-modal {
       display: none;
       position: fixed;
@@ -775,9 +850,12 @@
     </div>
 
     <div class="header-actions">
-      <!-- Catch & Logbook Controls -->
+      <!-- Full External Database Bypass -->
+      <a href="https://fishbrain.com/discover" target="_blank" rel="noopener noreferrer" class="btn" style="background:#0284c7;" title="Open complete worldwide fish directory">🌐 Full Fishbrain</a>
+      
+      <button class="btn" style="background:#6366f1;" onclick="openReminderModal()">⏰ Set Reminder</button>
       <button class="btn" style="background:#0284c7;" onclick="openCatchModal()">🐟 Log Catch</button>
-      <button class="btn" style="background:#0ea5e9;" onclick="openLogbookModal()">📖 My Logbook</button>
+      <button class="btn" style="background:#0ea5e9;" onclick="openLogbookModal()">📖 All Catches</button>
       <button class="btn" style="background:#059669;" onclick="openTripModal()">📍 Plan Trip</button>
       <button class="btn" style="background:#334155; padding: 6px 10px;" onclick="openTutorialModal()" title="Help & Guide">❓ Help</button>
       
@@ -791,6 +869,11 @@
       </div>
     </div>
   </header>
+
+  <div id="reminders-bar">
+    <span id="next-reminder-text">⏰ Upcoming: None</span>
+    <button class="btn-link" onclick="dismissUpcomingReminder()" style="color:#a5b4fc;">Clear</button>
+  </div>
 
   <div id="main-wrapper">
     <div id="collapse-tab" onclick="toggleChatSidebar()" title="Collapse/Expand Chat">
@@ -828,7 +911,7 @@
       <div id="messages-box" class="chat-messages"></div>
 
       <div class="chat-compose">
-        <input type="text" id="message-text" class="sms-input" placeholder="Text #green-valley-ward-fishing..." />
+        <input type="text" id="message-text" class="sms-input" placeholder="Text #green-valley-ward-fishing... (or try /remind 10 Pack lures)" />
         <button class="sms-send-btn" onclick="sendMessage()" title="Send">↑</button>
       </div>
     </aside>
@@ -841,6 +924,68 @@
         title="Take Me Fishing & Fishbrain Map">
       </iframe>
     </main>
+  </div>
+
+  <!-- CATCH LOGBOOK & CREW ARCHIVE -->
+  <div id="logbook-modal">
+    <div class="modal-content" style="border: 2px solid #0ea5e9;">
+      <div class="modal-header">
+        <h3 id="logbook-owner-title">📖 Caught Fish Archive</h3>
+        <button class="modal-close-btn" onclick="closeLogbookModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="logbook-tabs">
+          <button id="tab-crew" class="logbook-tab-btn active" onclick="switchLogbookView('crew')">👥 All Crew Catches</button>
+          <button id="tab-personal" class="logbook-tab-btn" onclick="switchLogbookView('personal')">👤 My Personal Logbook</button>
+        </div>
+        <div id="logbook-container" class="logbook-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUP REMINDER MODAL -->
+  <div id="reminder-modal">
+    <div class="modal-content" style="border: 2px solid #6366f1;">
+      <div class="modal-header">
+        <h3 style="color:#a5b4fc;">⏰ Schedule Group Reminder</h3>
+        <button class="modal-close-btn" onclick="closeReminderModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px;">Set an alert for the entire crew. When the timer expires, everyone's app chimes with a pop-up!</p>
+
+        <div class="form-group">
+          <label>Reminder Note / Mission</label>
+          <input type="text" id="reminder-note" class="input-dark" placeholder="e.g. Leave for Lake Poway, Buy nightcrawlers, Check boat battery" />
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <div class="form-group" style="flex:1;">
+            <label>Countdown Minutes</label>
+            <input type="number" id="reminder-minutes" class="input-dark" min="1" value="15" placeholder="Minutes" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Or Exact Alarm Time</label>
+            <input type="time" id="reminder-time-input" class="input-dark" />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn" style="flex:1; background:#6366f1;" onclick="scheduleGroupReminder()">Broadcast Reminder ⏰</button>
+          <button class="btn" style="background:#334155;" onclick="closeReminderModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALARM TRIGGER BANNER -->
+  <div id="alert-banner-modal">
+    <div class="alert-card">
+      <div style="font-size:2.4rem;">⏰ 🚨</div>
+      <h2 style="color:#818cf8; font-size:1.3rem;">CREW REMINDER ALARM!</h2>
+      <p id="alert-banner-text" style="font-size:1.05rem; font-weight:700; color:#ffffff;"></p>
+      <span id="alert-banner-sender" style="font-size:0.75rem; color:#a5b4fc;"></span>
+      <button class="btn" style="background:#4f46e5; margin-top:8px; padding:10px;" onclick="dismissTriggeredAlarm()">Got It! 👍</button>
+    </div>
   </div>
 
   <!-- LOG A CATCH MODAL -->
@@ -909,20 +1054,6 @@
     </div>
   </div>
 
-  <!-- PERSONAL LOGBOOK MODAL -->
-  <div id="logbook-modal">
-    <div class="modal-content" style="border: 2px solid #0ea5e9;">
-      <div class="modal-header">
-        <h3 id="logbook-owner-title">📖 My Catch Logbook</h3>
-        <button class="modal-close-btn" onclick="closeLogbookModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px;">Your personal history of landed fish and trophies on this account.</p>
-        <div id="logbook-container" class="logbook-grid"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- PLAN A FISHING TRIP MODAL -->
   <div id="trip-modal">
     <div class="modal-content" style="border: 2px solid #059669;">
@@ -982,12 +1113,10 @@
       <div class="modal-body">
         <p><strong>Quick Start Guide for Anglers:</strong></p>
         <ul>
-          <li><strong>Log a Catch:</strong> Click <strong>🐟 Log Catch</strong> to record fish stats, upload a photo, and choose whether to send it to your personal logbook, the group chat, or both.</li>
-          <li><strong>Personal Logbook:</strong> Click <strong>📖 My Logbook</strong> to browse your own personal catalog of landed catches tied to your account.</li>
-          <li><strong>Plan a Trip:</strong> Click <strong>📍 Plan Trip</strong> in the top bar to set your spot, date, target species, and estimated fee ($$), then broadcast it directly to the group.</li>
-          <li><strong>Sign In:</strong> Enter your name and a secret passcode to secure your account. You can create multiple accounts or switch anytime!</li>
-          <li><strong>Scout Locations:</strong> Use the interactive map on the right to browse lakes, boat ramps, and recent catches worldwide.</li>
-          <li><strong>Check Weather & Barometer:</strong> Type any town or spot in the top bar and click <strong>Weather</strong> to check conditions. Click the blue <code>?</code> button next to pressure for the fishing bite guide.</li>
+          <li><strong>See All Catches:</strong> Click <strong>🌐 Full Fishbrain</strong> in the top bar to browse the complete directory with thousands of catches and spots. Inside the app map, tap directly on any lake's blue or green pin to view all catches on that water!</li>
+          <li><strong>All Crew Catches:</strong> Click <strong>📖 All Catches</strong> to view every fish landed and shared by everyone in the crew.</li>
+          <li><strong>Group Reminders:</strong> Click <strong>⏰ Set Reminder</strong> or type <code>/remind 10 Check line</code> in chat to sound a synchronized crew alarm.</li>
+          <li><strong>Check Weather & Barometer:</strong> Type any location and click <strong>Weather</strong> to check conditions and atmospheric pressure trends.</li>
         </ul>
         <p style="text-align: center; margin-top: 10px;">
           <button class="btn" style="padding: 10px 24px; font-size: 0.95rem;" onclick="closeTutorialModal()">Let's Fish! 🎣</button>
@@ -1069,7 +1198,10 @@
     let currentTopic = 'green-valley-ward-fishing';
     let currentActiveUser = null;
     let currentCatchPhotoData = null;
+    let activeLogbookView = 'crew';
     const seenMsgIds = new Set();
+    const scheduledReminders = new Map();
+    let alarmChimeInterval = null;
     const clientId = 'fish_app_' + Math.random().toString(16).substring(2, 10);
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1087,6 +1219,19 @@
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
       } catch (e) {}
+    }
+
+    function playAlarmSiren() {
+      let step = 0;
+      clearInterval(alarmChimeInterval);
+      alarmChimeInterval = setInterval(() => {
+        playBeep(step % 2 === 0 ? 880 : 660, 'square', 0.2);
+        step++;
+      }, 250);
+    }
+
+    function stopAlarmSiren() {
+      clearInterval(alarmChimeInterval);
     }
 
     const permanentIntroMessages = [
@@ -1169,6 +1314,117 @@
       currentCatchPhotoData = null;
     }
 
+    function openReminderModal() {
+      if (!currentActiveUser) {
+        document.getElementById('auth-overlay').style.display = 'flex';
+        return;
+      }
+      document.getElementById('reminder-modal').style.display = 'flex';
+    }
+
+    function closeReminderModal() {
+      document.getElementById('reminder-modal').style.display = 'none';
+      document.getElementById('reminder-note').value = '';
+      document.getElementById('reminder-time-input').value = '';
+    }
+
+    function scheduleGroupReminder() {
+      const note = document.getElementById('reminder-note').value.trim();
+      const minsVal = parseFloat(document.getElementById('reminder-minutes').value);
+      const timeVal = document.getElementById('reminder-time-input').value;
+
+      if (!note) {
+        alert("Please write a reminder note!");
+        return;
+      }
+
+      let triggerTimestamp = 0;
+      let displayTimeLabel = '';
+
+      if (timeVal) {
+        const [hours, minutes] = timeVal.split(':').map(Number);
+        const target = new Date();
+        target.setHours(hours, minutes, 0, 0);
+        if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
+        triggerTimestamp = target.getTime();
+        displayTimeLabel = target.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } else if (!isNaN(minsVal) && minsVal > 0) {
+        triggerTimestamp = Date.now() + Math.round(minsVal * 60 * 1000);
+        displayTimeLabel = `in ${minsVal} min (${new Date(triggerTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+      } else {
+        alert("Please provide valid minutes or an exact time!");
+        return;
+      }
+
+      const reminderId = 'rem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      const reminderPayload = {
+        type: 'reminder_sync',
+        reminderId: reminderId,
+        note: note,
+        targetTime: triggerTimestamp,
+        timeLabel: displayTimeLabel,
+        creator: currentActiveUser
+      };
+
+      sendRawMQTTMessage(reminderPayload);
+      sendCustomMessage(`⏰ [GROUP REMINDER SCHEDULED]\n🔔 Alert: "${note}"\n⏳ Triggers: ${displayTimeLabel}\n👤 Set by: ${currentActiveUser}`, false, false, null, true);
+
+      closeReminderModal();
+      showToast("⏰ Group reminder broadcasted!");
+    }
+
+    function handleIncomingReminder(payload) {
+      const remainingMs = payload.targetTime - Date.now();
+      if (remainingMs <= 0) return;
+
+      if (scheduledReminders.has(payload.reminderId)) {
+        clearTimeout(scheduledReminders.get(payload.reminderId));
+      }
+
+      const timeoutId = setTimeout(() => {
+        triggerGroupAlarm(payload.note, payload.creator);
+        scheduledReminders.delete(payload.reminderId);
+        updateReminderHeaderBar();
+      }, remainingMs);
+
+      scheduledReminders.set(payload.reminderId, timeoutId);
+      updateReminderHeaderBar(payload.note, payload.timeLabel);
+    }
+
+    function updateReminderHeaderBar(note = '', timeLabel = '') {
+      const bar = document.getElementById('reminders-bar');
+      const text = document.getElementById('next-reminder-text');
+      if (note && timeLabel) {
+        text.innerHTML = `⏰ <strong>Next Alert:</strong> "${escapeHtml(note)}" — ${timeLabel}`;
+        bar.style.display = 'flex';
+      } else {
+        bar.style.display = 'none';
+      }
+    }
+
+    function dismissUpcomingReminder() {
+      document.getElementById('reminders-bar').style.display = 'none';
+    }
+
+    function triggerGroupAlarm(note, creator) {
+      document.getElementById('alert-banner-text').textContent = note;
+      document.getElementById('alert-banner-sender').textContent = `Broadcasted by ${creator}`;
+      document.getElementById('alert-banner-modal').style.display = 'flex';
+      playAlarmSiren();
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("⏰ Spot Finder Alert!", {
+          body: `${note} (by ${creator})`,
+          icon: "https://fishbrain.com/favicon.ico"
+        });
+      }
+    }
+
+    function dismissTriggeredAlarm() {
+      stopAlarmSiren();
+      document.getElementById('alert-banner-modal').style.display = 'none';
+    }
+
     function handlePhotoUpload(input) {
       const file = input.files[0];
       if (!file) return;
@@ -1204,7 +1460,7 @@
       reader.readAsDataURL(file);
     }
 
-    // LOG A CATCH WITH DESTINATION: Logbook, Chat, or Both
+    // SAVE CATCH AND STORE IN ALL CREW HISTORY
     function saveCatch() {
       const species = document.getElementById('catch-species').value.trim();
       const weight = document.getElementById('catch-weight').value.trim() || 'Unmeasured';
@@ -1213,7 +1469,7 @@
       const dest = document.querySelector('input[name="catch-dest"]:checked').value;
 
       if (!species) {
-        alert("Please enter the fish species!");
+        alert("Please enter the species!");
         return;
       }
 
@@ -1228,7 +1484,7 @@
         date: new Date().toLocaleDateString()
       };
 
-      // Save to personal logbook (per individual account)
+      // Always save to personal logbook
       if (dest === 'logbook' || dest === 'both') {
         const storeKey = `user_catches_${currentActiveUser.toLowerCase()}`;
         const myCatches = JSON.parse(localStorage.getItem(storeKey) || '[]');
@@ -1236,52 +1492,75 @@
         localStorage.setItem(storeKey, JSON.stringify(myCatches));
       }
 
-      // Broadcast to live group chat
+      // Save to shared crew catch archive
+      const allCrew = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
+      allCrew.unshift(catchData);
+      localStorage.setItem('all_crew_catches_archive', JSON.stringify(allCrew));
+
+      // Broadcast payload to chat
       if (dest === 'chat' || dest === 'both') {
         const catchText = `🏆 [CATCH LOGGED]\n🐟 Species: ${species}\n⚖️ Weight: ${weight}\n📍 Spot: ${spot}${lure ? `\n🪱 Lure: ${lure}` : ''}`;
-        sendCustomMessage(catchText, false, true, currentCatchPhotoData);
+        sendCustomMessage(catchText, false, true, currentCatchPhotoData, false, catchData);
       }
 
       closeCatchModal();
-      showToast(dest === 'logbook' ? "📖 Catch added to your personal logbook!" : "🎉 Catch logged and shared with the crew!");
+      showToast(dest === 'logbook' ? "📖 Saved to logbook!" : "🎉 Logged and shared with the crew!");
       spawnConfetti(['🐟', '🏆', '⭐', '🎣']);
     }
 
-    // OPEN USER'S PERSONAL LOGBOOK
+    // TOGGLE BETWEEN CREW AND PERSONAL LOGBOOK
+    function switchLogbookView(view) {
+      activeLogbookView = view;
+      document.getElementById('tab-crew').classList.toggle('active', view === 'crew');
+      document.getElementById('tab-personal').classList.toggle('active', view === 'personal');
+      renderLogbookList();
+    }
+
+    function renderLogbookList() {
+      const container = document.getElementById('logbook-container');
+      container.innerHTML = '';
+
+      let catches = [];
+      if (activeLogbookView === 'crew') {
+        catches = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
+      } else {
+        const userKey = `user_catches_${currentActiveUser.toLowerCase()}`;
+        catches = JSON.parse(localStorage.getItem(userKey) || '[]');
+      }
+
+      if (catches.length === 0) {
+        container.innerHTML = `<div class="logbook-empty">No catches found in this view! Click <strong>🐟 Log Catch</strong> to add a fish.</div>`;
+        return;
+      }
+
+      catches.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'logbook-card';
+        const imgHtml = c.photo ? `<img src="${c.photo}" alt="${escapeHtml(c.species)}" />` : `<div style="width:95px;height:95px;background:#1e293b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;">🐟</div>`;
+
+        card.innerHTML = `
+          ${imgHtml}
+          <div class="logbook-details">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong>${escapeHtml(c.species)}</strong>
+              <span style="font-size:0.75rem; color:#38bdf8; font-weight:700;">👤 ${escapeHtml(c.angler)}</span>
+            </div>
+            <span>⚖️ Weight: ${escapeHtml(c.weight)}</span>
+            <span>📍 Spot: ${escapeHtml(c.spot)}</span>
+            ${c.lure ? `<span>🪱 Lure: ${escapeHtml(c.lure)}</span>` : ''}
+            <span style="color:#64748b; font-size:0.72rem; margin-top:4px;">📅 Landed on ${escapeHtml(c.date)}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
     function openLogbookModal() {
       if (!currentActiveUser) {
         document.getElementById('auth-overlay').style.display = 'flex';
         return;
       }
-
-      document.getElementById('logbook-owner-title').textContent = `📖 ${currentActiveUser}'s Logbook`;
-      const storeKey = `user_catches_${currentActiveUser.toLowerCase()}`;
-      const myCatches = JSON.parse(localStorage.getItem(storeKey) || '[]');
-      const container = document.getElementById('logbook-container');
-      container.innerHTML = '';
-
-      if (myCatches.length === 0) {
-        container.innerHTML = `<div class="logbook-empty">No fish logged yet! Click <strong>🐟 Log Catch</strong> to add your first catch to this logbook.</div>`;
-      } else {
-        myCatches.forEach((c) => {
-          const card = document.createElement('div');
-          card.className = 'logbook-card';
-          const imgHtml = c.photo ? `<img src="${c.photo}" alt="${escapeHtml(c.species)}" />` : `<div style="width:90px;height:90px;background:#1e293b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:2rem;">🐟</div>`;
-
-          card.innerHTML = `
-            ${imgHtml}
-            <div class="logbook-details">
-              <strong>${escapeHtml(c.species)}</strong>
-              <span>⚖️ Weight: ${escapeHtml(c.weight)}</span>
-              <span>📍 Spot: ${escapeHtml(c.spot)}</span>
-              ${c.lure ? `<span>🪱 Lure: ${escapeHtml(c.lure)}</span>` : ''}
-              <span style="color:#64748b; font-size:0.72rem; margin-top:4px;">📅 Logged on ${escapeHtml(c.date)}</span>
-            </div>
-          `;
-          container.appendChild(card);
-        });
-      }
-
+      renderLogbookList();
       document.getElementById('logbook-modal').style.display = 'flex';
     }
 
@@ -1306,7 +1585,7 @@
 
       sendCustomMessage(tripText, true);
       closeTripModal();
-      showToast("📢 Trip planned with estimated cost and broadcasted!");
+      showToast("📢 Trip planned and broadcasted!");
       spawnConfetti(['📍', '💵', '🎣', '🚤']);
     }
 
@@ -1339,11 +1618,11 @@
       }
 
       if (nameInput.toLowerCase() === 'captain ahab') {
-        showToast("⚓ <strong>Easter Egg #8:</strong> <em>'There she blows! The White Whale!'</em> Ahab has commandeered the helm!");
+        showToast("⚓ <strong>Easter Egg #8:</strong> Ahab has taken the helm!");
         playBeep(220, 'sawtooth', 0.6);
       }
       if (nameInput.toLowerCase() === 'poseidon') {
-        showToast("🔱 <strong>Easter Egg #9:</strong> <em>KRAKEN AWAKENED!</em> Lord of the Oceans steps ashore!");
+        showToast("🔱 <strong>Easter Egg #9:</strong> Lord of the Oceans has joined!");
         spawnConfetti(['🔱', '⚡', '🌊']);
       }
 
@@ -1373,6 +1652,10 @@
       document.getElementById('display-username').textContent = currentActiveUser;
       document.getElementById('message-text').placeholder = `Text as ${currentActiveUser}...`;
       renderSavedHistory(currentTopic);
+
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
     }
 
     function switchAccount() {
@@ -1452,6 +1735,20 @@
           return;
         }
 
+        if (payload.type === 'reminder_sync') {
+          handleIncomingReminder(payload);
+          return;
+        }
+
+        // Auto-save any catch broadcasted by others into the local crew archive
+        if (payload.catchData) {
+          const allCrew = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
+          if (!allCrew.some(c => c.id === payload.catchData.id)) {
+            allCrew.unshift(payload.catchData);
+            localStorage.setItem('all_crew_catches_archive', JSON.stringify(allCrew));
+          }
+        }
+
         if (payload.id && seenMsgIds.has(payload.id)) return;
         seenMsgIds.add(payload.id);
 
@@ -1462,7 +1759,15 @@
       }
     }
 
-    function sendCustomMessage(text, isTrip = false, isCatch = false, photoData = null) {
+    function sendRawMQTTMessage(obj) {
+      if (!client || !client.isConnected()) return;
+      const message = new Paho.MQTT.Message(JSON.stringify(obj));
+      message.destinationName = `fishbrain_group_chat/${currentTopic}`;
+      message.qos = 1;
+      client.send(message);
+    }
+
+    function sendCustomMessage(text, isTrip = false, isCatch = false, photoData = null, isReminder = false, catchData = null) {
       if (!currentActiveUser) {
         document.getElementById('auth-overlay').style.display = 'flex';
         return;
@@ -1476,21 +1781,43 @@
         text: text,
         isTrip: isTrip,
         isCatch: isCatch,
+        isReminder: isReminder,
         photo: photoData,
+        catchData: catchData,
         time: getFormattedTimestamp()
       };
 
-      const message = new Paho.MQTT.Message(JSON.stringify(payload));
-      message.destinationName = `fishbrain_group_chat/${currentTopic}`;
-      message.qos = 1;
-
-      client.send(message);
+      sendRawMQTTMessage(payload);
     }
 
     function sendMessage() {
       const input = document.getElementById('message-text');
       const text = input.value.trim();
       if (!text) return;
+
+      if (text.toLowerCase().startsWith('/remind ')) {
+        const parts = text.split(' ');
+        const mins = parseFloat(parts[1]);
+        const note = parts.slice(2).join(' ');
+
+        if (!isNaN(mins) && mins > 0 && note) {
+          const target = Date.now() + Math.round(mins * 60 * 1000);
+          const timeLabel = `in ${mins} min (${new Date(target).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+          const reminderPayload = {
+            type: 'reminder_sync',
+            reminderId: 'rem_' + Date.now(),
+            note: note,
+            targetTime: target,
+            timeLabel: timeLabel,
+            creator: currentActiveUser
+          };
+          sendRawMQTTMessage(reminderPayload);
+          sendCustomMessage(`⏰ [GROUP REMINDER SCHEDULED]\n🔔 Alert: "${note}"\n⏳ Triggers: ${timeLabel}\n👤 Set by: ${currentActiveUser}`, false, false, null, true);
+          input.value = '';
+          showToast(`⏰ Scheduled reminder for ${mins} mins!`);
+          return;
+        }
+      }
 
       if (text.toLowerCase() === '/disco') {
         input.value = '';
@@ -1526,7 +1853,7 @@
       if (text.toLowerCase() === '/bass') {
         input.value = '';
         spawnConfetti(['🐟', '🎣', '🏆', '⭐']);
-        showToast("🚨 <strong>Easter Egg #6:</strong> <em>FISH ON!</em> You set the hook on a certified 10.4 lb Monster Bass!");
+        showToast("🚨 <strong>Easter Egg #6:</strong> <em>FISH ON!</em> 10.4 lb Monster Bass landed!");
         return;
       }
 
@@ -1557,11 +1884,13 @@
 
       const isTrip = msg.isTrip || msg.text.includes('[FISHING TRIP PLAN]');
       const isCatch = msg.isCatch || msg.text.includes('[CATCH LOGGED]');
+      const isReminder = msg.isReminder || msg.text.includes('[GROUP REMINDER SCHEDULED]');
       const formattedText = escapeHtml(msg.text).replace(/\n/g, '<br/>');
 
       let bubbleClass = 'bubble';
       if (isTrip) bubbleClass += ' trip-announcement';
       if (isCatch) bubbleClass += ' catch-card';
+      if (isReminder) bubbleClass += ' reminder-card';
 
       let photoHtml = '';
       if (msg.photo) {
@@ -1618,10 +1947,7 @@
 
       if (broadcast && client && client.isConnected()) {
         const wipePayload = { action: 'wipe_chat' };
-        const message = new Paho.MQTT.Message(JSON.stringify(wipePayload));
-        message.destinationName = `fishbrain_group_chat/${currentTopic}`;
-        message.qos = 1;
-        client.send(message);
+        sendRawMQTTMessage(wipePayload);
       }
     }
 
@@ -1665,7 +1991,7 @@
 
       if (location.toLowerCase() === 'atlantis') {
         statsContainer.innerHTML = `<span>🔱 Depth: <strong>12,400 ft</strong></span> <span>🌡️ <strong>36°F</strong></span> <span>⏱️ Baro: <strong>5,520 inHg</strong></span>`;
-        showToast("🔱 <strong>Easter Egg #2:</strong> Submersible entered the Mariana Trench &amp; discovered Atlantis!");
+        showToast("🔱 <strong>Easter Egg #2:</strong> Submersible reached Atlantis!");
         spawnConfetti(['🫧', '🔱', '🦈', '🧜‍♂️']);
         return;
       }
@@ -1710,7 +2036,7 @@
       playBeep(300 + (titleClicks * 60), 'sine', 0.1);
 
       if (titleClicks === 5) {
-        showToast("🏆 <strong>Easter Egg #1:</strong> MASTER ANGLER TROPHY! You've officially entered the Hall of Fame!");
+        showToast("🏆 <strong>Easter Egg #1:</strong> MASTER ANGLER TROPHY UNLOCKED!");
         spawnConfetti(['🏆', '✨', '🥇', '🎣']);
       } else if (titleClicks === 7) {
         showToast("🎮 <strong>Easter Egg #12:</strong> SECRET SNAKE RETRO ARCADE DISCOVERED!");
@@ -1749,7 +2075,7 @@
     });
 
     document.getElementById('channel-name-tag').addEventListener('click', () => {
-      showToast("🗺️ <strong>Easter Egg #15:</strong> <em>SECRET LOG CACHE FOUND:</em> 32°58'02.4\"N 117°02'21.1\"W (Check the submerged stump!)");
+      showToast("🗺️ <strong>Easter Egg #15:</strong> <em>SECRET LOG CACHE FOUND:</em> 32°58'02.4\"N 117°02'21.1\"W");
     });
 
     document.getElementById('avatar-icon').addEventListener('click', () => {
@@ -1776,13 +2102,13 @@
     document.getElementById('messages-box').addEventListener('dblclick', (e) => {
       if (e.target.id === 'messages-box') {
         spawnBubbles();
-        showToast("🫧 <strong>Easter Egg #19:</strong> Bubbles popping up from an underwater aerator!");
+        showToast("🫧 <strong>Easter Egg #19:</strong> Bubbles rising from the depths!");
       }
     });
 
     document.getElementById('collapse-tab').addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      showToast("🚪 <strong>Easter Egg #20:</strong> You pried open the secret tackle locker! +10 Golden Crankbaits added!");
+      showToast("🚪 <strong>Easter Egg #20:</strong> Secret tackle locker opened! +10 Golden Crankbaits!");
       spawnConfetti(['🪱', '🎣', '✨', '⚡']);
     });
 
@@ -1844,7 +2170,6 @@
       }
     }
 
-    // Snake Game Engine
     let gameRunning = false;
     let snake = [];
     let food = { x: 0, y: 0 };
