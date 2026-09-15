@@ -22,22 +22,7 @@
       background: #0f172a;
       color: #f8fafc;
       overflow: hidden;
-      transition: filter 0.4s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-
-    .barrel-rolling { animation: fullRoll 1s ease-in-out forwards; }
-    @keyframes fullRoll { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    .earthquake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite; }
-    @keyframes shake {
-      10%, 90% { transform: translate3d(-3px, 0, 0); }
-      20%, 80% { transform: translate3d(5px, 0, 0); }
-      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-      40%, 60% { transform: translate3d(6px, 0, 0); }
-    }
-
-    .retro-synth { filter: contrast(150%) hue-rotate(280deg) saturate(200%) !important; }
-    .upside-down { transform: rotate(180deg) !important; }
 
     header {
       background: #1e293b;
@@ -206,6 +191,8 @@
       line-height: 1;
     }
 
+    .modal-close-btn:hover { color: #f87171; }
+
     .modal-body p, .modal-body li {
       font-size: 0.82rem;
       line-height: 1.45;
@@ -313,7 +300,6 @@
     .guide-table th, .guide-table td { border: 1px solid #334155; padding: 5px 7px; text-align: left; }
     .guide-table th { background: #1e293b; color: #38bdf8; }
 
-    /* Main Desktop Shell */
     #main-wrapper {
       display: flex;
       flex: 1;
@@ -581,7 +567,6 @@
 
     iframe { width: 100%; height: 100%; border: none; }
 
-    /* Mobile Bottom Tab Bar */
     #mobile-nav-bar {
       display: none;
       background: #18181b;
@@ -606,96 +591,28 @@
       cursor: pointer;
     }
 
-    .mobile-tab-btn.active {
-      color: #38bdf8;
-    }
+    .mobile-tab-btn.active { color: #38bdf8; }
 
-    /* ---------------------------------------------------- */
-    /* AUTOMATIC MOBILE RESPONSIVE ENGINE (PHONE VS PC) */
-    /* ---------------------------------------------------- */
     @media (max-width: 768px) {
-      #collapse-tab {
-        display: none !important;
-      }
-
-      #mobile-nav-bar {
-        display: flex;
-      }
-
-      /* Stack Views in Tab Mode */
-      #main-wrapper {
-        position: relative;
-      }
-
+      #collapse-tab { display: none !important; }
+      #mobile-nav-bar { display: flex; }
+      #main-wrapper { position: relative; }
       #chat-sidebar {
         position: absolute;
         inset: 0;
         width: 100% !important;
         display: none;
       }
-
       #map-container {
         position: absolute;
         inset: 0;
         width: 100%;
         display: block;
       }
-
-      body.mobile-view-chat #chat-sidebar {
-        display: flex !important;
-      }
-
-      body.mobile-view-chat #map-container {
-        display: none !important;
-      }
-
-      body.mobile-view-map #chat-sidebar {
-        display: none !important;
-      }
-
-      body.mobile-view-map #map-container {
-        display: block !important;
-      }
-    }
-
-    #game-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 150;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(8px);
-    }
-
-    .game-card {
-      background: #0f172a;
-      border: 2px solid #34d399;
-      border-radius: 16px;
-      padding: 16px;
-      width: 90%;
-      max-width: 400px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    #gameCanvas {
-      background: #022c22;
-      border: 2px solid #059669;
-      border-radius: 8px;
-      max-width: 100%;
-    }
-
-    .game-stats {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: #34d399;
+      body.mobile-view-chat #chat-sidebar { display: flex !important; }
+      body.mobile-view-chat #map-container { display: none !important; }
+      body.mobile-view-map #chat-sidebar { display: none !important; }
+      body.mobile-view-map #map-container { display: block !important; }
     }
 
     #egg-toast {
@@ -763,7 +680,7 @@
         <button class="btn-link" onclick="switchAccount()">Switch Account</button>
       </div>
 
-      <!-- SECURE PASSCODE GATE -->
+      <!-- PASSCODE LOCK / SIGN-IN OVERLAY -->
       <div id="auth-overlay">
         <div class="auth-box">
           <h2 id="auth-title-label">Angler Sign In</h2>
@@ -793,7 +710,6 @@
     </main>
   </div>
 
-  <!-- Mobile Bottom Tab Bar -->
   <nav id="mobile-nav-bar">
     <button id="mob-map-tab" class="mobile-tab-btn active" onclick="setMobileTab('map')">
       <span style="font-size:1.1rem;">🗺️</span>
@@ -805,7 +721,7 @@
     </button>
   </nav>
 
-  <!-- KAI'S CHAT BUILDER -->
+  <!-- KAI NEW ROOM CREATOR -->
   <div id="channel-create-modal">
     <div class="modal-content" style="border: 2px solid #7c3aed;">
       <div class="modal-header">
@@ -817,7 +733,7 @@
         
         <div class="form-group">
           <label>Group Chat Name</label>
-          <input type="text" id="new-channel-name" class="input-dark" placeholder="e.g. Saltwater Crew, Pier Anglers" />
+          <input type="text" id="new-channel-name" class="input-dark" placeholder="e.g. Saltwater Crew, Lake Hodges" />
         </div>
 
         <div class="form-group">
@@ -850,7 +766,7 @@
     </div>
   </div>
 
-  <!-- LOG A CATCH MODAL -->
+  <!-- LOG A CATCH -->
   <div id="catch-modal">
     <div class="modal-content" style="border: 2px solid #38bdf8;">
       <div class="modal-header">
@@ -916,7 +832,7 @@
     </div>
   </div>
 
-  <!-- PLAN A FISHING TRIP MODAL -->
+  <!-- PLAN A TRIP -->
   <div id="trip-modal">
     <div class="modal-content" style="border: 2px solid #059669;">
       <div class="modal-header">
@@ -966,7 +882,7 @@
     </div>
   </div>
 
-  <!-- TUTORIAL MODAL -->
+  <!-- TUTORIAL -->
   <div id="tutorial-modal">
     <div class="modal-content" style="border: 2px solid #38bdf8;">
       <div class="modal-header">
@@ -975,10 +891,9 @@
       </div>
       <div class="modal-body">
         <ul>
-          <li><strong>Mobile vs PC:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they display side by side!</li>
-          <li><strong>Secure Rooms:</strong> Each group chat requires its own secret passcode to unlock. Kai has master creator authority.</li>
+          <li><strong>All Rooms Work:</strong> You can create and switch between different chat rooms. Each room requires its own passcode.</li>
+          <li><strong>Mobile Mode:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side!</li>
           <li><strong>Phone Ding:</strong> When someone sends a text, your device sounds a bright chime and vibrates.</li>
-          <li><strong>Barometer & Weather:</strong> Click the question mark button next to pressure for fish behavior tactics.</li>
         </ul>
         <p style="text-align: center; margin-top: 8px;">
           <button class="btn" style="padding: 8px 20px; font-size: 0.9rem;" onclick="closeTutorialModal()">Let's Fish! 🎣</button>
@@ -1008,20 +923,6 @@
     </div>
   </div>
 
-  <div id="game-modal">
-    <div class="game-card">
-      <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <h3 style="color:#34d399; font-size: 1.05rem;">🎣 Snake on the Line!</h3>
-        <button class="modal-close-btn" onclick="closeGame()">✕</button>
-      </div>
-      <div class="game-stats">
-        <span>Score: <span id="game-score">0</span></span>
-        <span>High: <span id="game-high">0</span></span>
-      </div>
-      <canvas id="gameCanvas" width="340" height="260"></canvas>
-    </div>
-  </div>
-
   <div id="egg-toast"></div>
 
   <script>
@@ -1041,9 +942,8 @@
     let currentCatchPhotoData = null;
     let activeLogbookView = 'crew';
     const seenMsgIds = new Set();
-    const clientId = 'fish_app_' + Math.random().toString(16).substring(2, 10);
+    const clientId = 'fish_scout_' + Math.random().toString(16).substring(2, 10);
 
-    // Track rooms unlocked during this session
     let unlockedRoomsInSession = new Set();
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1111,7 +1011,6 @@
       setTimeout(() => { toast.style.display = 'none'; }, 3500);
     }
 
-    // Mobile navigation tab handler
     function setMobileTab(tab) {
       document.body.classList.remove('mobile-view-map', 'mobile-view-chat');
       document.getElementById('mob-map-tab').classList.remove('active');
@@ -1139,7 +1038,6 @@
       document.getElementById('message-text').placeholder = `Text ${channels[currentTopic]?.name || 'crew'}...`;
     }
 
-    // SECURE ROOM SWITCHER: Requires exact room passcode unless Kai or already unlocked in session
     function attemptChannelSwitch(targetTopic) {
       if (targetTopic === currentTopic) return;
 
@@ -1149,7 +1047,6 @@
       if (isKai || isAlreadyUnlocked) {
         finishChannelSwitch(targetTopic);
       } else {
-        // Enforce passcode lock modal for this new room
         pendingSwitchTopic = targetTopic;
         document.getElementById('auth-overlay').style.display = 'flex';
         document.getElementById('auth-title-label').textContent = `Unlock ${channels[targetTopic]?.name || 'Chat'}`;
@@ -1161,15 +1058,9 @@
     }
 
     function finishChannelSwitch(newTopic) {
-      if (client && client.isConnected()) {
-        client.unsubscribe(`fishbrain_group_chat/${currentTopic}`);
-      }
       currentTopic = newTopic;
       pendingSwitchTopic = null;
       updateChannelDropdownUI();
-      if (client && client.isConnected()) {
-        subscribeToTopic(currentTopic);
-      }
       renderSavedHistory(currentTopic);
     }
 
@@ -1186,10 +1077,8 @@
 
       const targetRoomTopic = pendingSwitchTopic || currentTopic;
       const expectedPass = channels[targetRoomTopic]?.passcode || 'GV24';
-
       const isMasterKai = nameInput.toLowerCase() === 'kai';
 
-      // Verify passcode strictly
       if (!isMasterKai && passInput !== expectedPass) {
         errBox.textContent = 'Incorrect passcode. Access denied.';
         playBeep(220, 'sawtooth', 0.25);
@@ -1214,7 +1103,6 @@
       document.getElementById('display-username').textContent = currentActiveUser;
       document.getElementById('message-text').placeholder = `Text ${channels[currentTopic]?.name || '#chat'}...`;
 
-      // Master admin controls for Kai
       const kaiBtn = document.getElementById('kai-add-room-btn');
       if (currentActiveUser && currentActiveUser.toLowerCase() === 'kai') {
         kaiBtn.style.display = 'inline-flex';
@@ -1300,6 +1188,10 @@
       document.getElementById('channel-create-modal').style.display = 'none';
     }
 
+    function sanitizeSlug(str) {
+      return str.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'room';
+    }
+
     function createChannelSubmit() {
       const roomName = document.getElementById('new-channel-name').value.trim();
       const roomPass = document.getElementById('new-channel-pass').value.trim();
@@ -1309,7 +1201,7 @@
         return;
       }
 
-      const slug = roomName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      const slug = sanitizeSlug(roomName);
       const formattedTitle = roomName.startsWith('#') ? roomName : '#' + roomName;
 
       const newRoom = {
@@ -1324,7 +1216,7 @@
       sendRawMQTTMessage({
         type: 'room_created_sync',
         room: newRoom
-      });
+      }, 'general-broadcast');
 
       closeCreateChannelModal();
       updateChannelDropdownUI();
@@ -1512,7 +1404,9 @@
     function onConnectSuccess() {
       document.getElementById('conn-dot').className = 'status-dot online';
       document.getElementById('conn-text').textContent = 'Live Sync';
-      subscribeToTopic(currentTopic);
+      
+      // CRITICAL FIX: Subscribe using MQTT wildcard '+' to catch messages on ALL rooms
+      client.subscribe('fishbrain_group_chat/+', { qos: 1 });
     }
 
     function onConnectFailure() {
@@ -1527,29 +1421,37 @@
       setTimeout(initChat, 2500);
     }
 
-    function subscribeToTopic(channel) {
-      const topic = `fishbrain_group_chat/${channel}`;
-      client.subscribe(topic, { qos: 1 });
-      renderSavedHistory(channel);
-    }
-
     function onMessageArrived(message) {
       try {
         const payload = JSON.parse(message.payloadString);
+        const destinationTopic = message.destinationName.replace('fishbrain_group_chat/', '');
 
         if (payload.action === 'wipe_chat') {
-          clearChannelHistory(false);
+          if (destinationTopic === currentTopic) {
+            clearChannelHistory(false);
+          }
           return;
         }
 
+        // Room creation broadcast
         if (payload.type === 'room_created_sync' && payload.room) {
-          channels[payload.room.topic] = payload.room;
+          if (!channels[payload.room.topic]) {
+            channels[payload.room.topic] = payload.room;
+            localStorage.setItem('app_group_channels', JSON.stringify(channels));
+            updateChannelDropdownUI();
+            showToast(`📢 New room available: ${payload.room.name}`);
+          }
+          return;
+        }
+
+        // Automatically learn custom rooms if we receive messages on them
+        if (payload.roomMeta && !channels[payload.roomMeta.topic]) {
+          channels[payload.roomMeta.topic] = payload.roomMeta;
           localStorage.setItem('app_group_channels', JSON.stringify(channels));
           updateChannelDropdownUI();
-          showToast(`📢 New room available: ${payload.room.name}`);
-          return;
         }
 
+        // Catch Log archive sync
         if (payload.catchData) {
           const allCrew = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
           if (!allCrew.some(c => c.id === payload.catchData.id)) {
@@ -1561,15 +1463,22 @@
         if (payload.id && seenMsgIds.has(payload.id)) return;
         seenMsgIds.add(payload.id);
 
-        appendMessageToUI(payload);
-        persistMessageLocally(currentTopic, payload);
+        // Always save message under its actual room channel
+        const messageChannel = payload.channel || destinationTopic || currentTopic;
+        persistMessageLocally(messageChannel, payload);
 
-        // Chime device if text is from someone else
+        // If the message is for the currently viewed room, add to UI
+        if (messageChannel === currentTopic) {
+          appendMessageToUI(payload);
+        }
+
+        // Chime device if message is from another user
         if (currentActiveUser && payload.sender.toLowerCase() !== currentActiveUser.toLowerCase()) {
           playIncomingDing();
 
+          const roomTitle = channels[messageChannel]?.name || `#${messageChannel}`;
           if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(`💬 ${payload.sender} (${channels[currentTopic]?.name || 'Chat'})`, {
+            new Notification(`💬 ${payload.sender} (${roomTitle})`, {
               body: payload.text,
               icon: "https://fishbrain.com/favicon.ico"
             });
@@ -1580,10 +1489,11 @@
       }
     }
 
-    function sendRawMQTTMessage(obj) {
+    function sendRawMQTTMessage(obj, roomTopic = null) {
       if (!client || !client.isConnected()) return;
+      const targetRoom = sanitizeSlug(roomTopic || currentTopic);
       const message = new Paho.MQTT.Message(JSON.stringify(obj));
-      message.destinationName = `fishbrain_group_chat/${currentTopic}`;
+      message.destinationName = `fishbrain_group_chat/${targetRoom}`;
       message.qos = 1;
       client.send(message);
     }
@@ -1592,10 +1502,18 @@
       if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
       if (!text || !client || !client.isConnected()) return;
 
+      const currentRoomData = channels[currentTopic] || {
+        name: '#' + currentTopic,
+        topic: currentTopic,
+        passcode: 'GV24'
+      };
+
       const payload = {
         id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         sender: currentActiveUser,
         text: text,
+        channel: currentTopic,
+        roomMeta: currentRoomData,
         isTrip: isTrip,
         isCatch: isCatch,
         photo: photoData,
@@ -1603,19 +1521,13 @@
         time: getFormattedTimestamp()
       };
 
-      sendRawMQTTMessage(payload);
+      sendRawMQTTMessage(payload, currentTopic);
     }
 
     function sendMessage() {
       const input = document.getElementById('message-text');
       const text = input.value.trim();
       if (!text) return;
-
-      if (text.toLowerCase() === '/snake') {
-        input.value = '';
-        openGame();
-        return;
-      }
 
       sendCustomMessage(text);
       input.value = '';
@@ -1691,7 +1603,7 @@
 
       if (broadcast && client && client.isConnected()) {
         const wipePayload = { action: 'wipe_chat' };
-        sendRawMQTTMessage(wipePayload);
+        sendRawMQTTMessage(wipePayload, currentTopic);
       }
     }
 
@@ -1760,116 +1672,6 @@
         statsContainer.innerHTML = `<span style="color:#f87171;">Weather error</span>`;
       }
     }
-
-    let gameRunning = false;
-    let snake = [];
-    let food = { x: 0, y: 0 };
-    let dx = 15;
-    let dy = 0;
-    let gameScore = 0;
-    let gameHighScore = 0;
-    let gameInterval = null;
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const gridSize = 15;
-
-    function openGame() {
-      document.getElementById('game-modal').style.display = 'flex';
-      startSnakeGame();
-    }
-    function closeGame() {
-      document.getElementById('game-modal').style.display = 'none';
-      clearInterval(gameInterval);
-      gameRunning = false;
-    }
-
-    function startSnakeGame() {
-      snake = [ { x: 150, y: 150 }, { x: 135, y: 150 }, { x: 120, y: 150 } ];
-      dx = gridSize; dy = 0; gameScore = 0;
-      document.getElementById('game-score').textContent = gameScore;
-      placeFood();
-      gameRunning = true;
-      clearInterval(gameInterval);
-      gameInterval = setInterval(updateSnakeGame, 90);
-    }
-
-    function placeFood() {
-      food.x = Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize;
-      food.y = Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize;
-    }
-
-    function updateSnakeGame() {
-      if (!gameRunning) return;
-      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-
-      if (head.x < 0) head.x = canvas.width - gridSize;
-      if (head.x >= canvas.width) head.x = 0;
-      if (head.y < 0) head.y = canvas.height - gridSize;
-      if (head.y >= canvas.height) head.y = 0;
-
-      for (let i = 0; i < snake.length; i++) {
-        if (head.x === snake[i].x && head.y === snake[i].y) {
-          playBeep(160, 'sawtooth', 0.4);
-          showToast(`💥 Line Snapped! Final Score: ${gameScore}`);
-          startSnakeGame();
-          return;
-        }
-      }
-
-      snake.unshift(head);
-
-      if (head.x === food.x && head.y === food.y) {
-        playBeep(659.25, 'triangle', 0.12);
-        gameScore += 10;
-        document.getElementById('game-score').textContent = gameScore;
-        if (gameScore > gameHighScore) {
-          gameHighScore = gameScore;
-          document.getElementById('game-high').textContent = gameHighScore;
-        }
-        placeFood();
-      } else {
-        snake.pop();
-      }
-
-      drawSnakeGame();
-    }
-
-    function drawSnakeGame() {
-      ctx.fillStyle = '#022c22';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.strokeStyle = '#064e3b';
-      ctx.lineWidth = 0.5;
-      for (let x = 0; x < canvas.width; x += gridSize) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-      }
-      for (let y = 0; y < canvas.height; y += gridSize) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-      }
-
-      ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.arc(food.x + gridSize/2, food.y + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      snake.forEach((segment, index) => {
-        ctx.fillStyle = index === 0 ? '#38bdf8' : '#34d399';
-        ctx.fillRect(segment.x + 1, segment.y + 1, gridSize - 2, gridSize - 2);
-      });
-    }
-
-    window.addEventListener('keydown', (e) => {
-      if (!gameRunning) return;
-      const goingUp = dy === -gridSize;
-      const goingDown = dy === gridSize;
-      const goingRight = dx === gridSize;
-      const goingLeft = dx === -gridSize;
-
-      if (e.key === 'ArrowLeft' && !goingRight) { dx = -gridSize; dy = 0; e.preventDefault(); }
-      if (e.key === 'ArrowUp' && !goingDown) { dx = 0; dy = -gridSize; e.preventDefault(); }
-      if (e.key === 'ArrowRight' && !goingLeft) { dx = gridSize; dy = 0; e.preventDefault(); }
-      if (e.key === 'ArrowDown' && !goingUp) { dx = 0; dy = gridSize; e.preventDefault(); }
-    });
 
     window.addEventListener('DOMContentLoaded', () => {
       updateChannelDropdownUI();
