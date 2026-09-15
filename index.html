@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Spot Finder & Live Crew Chat</title>
+  <!-- Paho MQTT WebSocket Client library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <style>
     * {
@@ -83,6 +84,7 @@
       color: #f8fafc;
       font-size: 0.78rem;
       outline: none;
+      transition: border-color 0.2s;
     }
 
     .input-dark:focus { border-color: #38bdf8; }
@@ -144,7 +146,6 @@
       border: none;
     }
 
-    /* Modals */
     #baro-modal, #tutorial-modal, #trip-modal, #catch-modal, #logbook-modal, #channel-create-modal {
       display: none;
       position: fixed;
@@ -406,7 +407,7 @@
       text-decoration: underline;
     }
 
-    /* HARDENED AUTH OVERLAY */
+    /* STRICT AUTH OVERLAY */
     #auth-overlay {
       position: absolute;
       inset: 0;
@@ -456,7 +457,10 @@
       font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
+      transition: background 0.2s;
     }
+
+    .auth-btn:hover { background: #0062cc; }
 
     #auth-error {
       font-size: 0.72rem;
@@ -571,6 +575,7 @@
 
     iframe { width: 100%; height: 100%; border: none; }
 
+    /* Mobile Bottom Tab Bar */
     #mobile-nav-bar {
       display: none;
       background: #18181b;
@@ -684,15 +689,15 @@
         <button class="btn-link" onclick="handleExplicitLogout()">Log Out 🔒</button>
       </div>
 
-      <!-- MANDATORY LOGIN & ROOM PASSCODE AUTH -->
+      <!-- MANDATORY LOGIN: NAME + USER PASSWORD + ROOM PASSCODE (ZERO LEAKS) -->
       <div id="auth-overlay">
         <div class="auth-box">
           <h2 id="auth-title-label">Angler Sign In</h2>
-          <p id="auth-room-hint">Enter your name, account password, and room code.</p>
+          <p id="auth-room-hint">Type your handle, personal password, and room passcode.</p>
           <input type="text" id="auth-username" class="auth-input" placeholder="Your Name / Handle" autocomplete="off" />
-          <input type="password" id="auth-userpass" class="auth-input" placeholder="Account Password (your secret)" autocomplete="new-password" />
+          <input type="password" id="auth-userpass" class="auth-input" placeholder="Your Account Password" autocomplete="new-password" />
           <input type="password" id="auth-roompass" class="auth-input" placeholder="Room Passcode" autocomplete="new-password" />
-          <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Unlock Room 🎣</button>
+          <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Unlock &amp; Enter Chat 🎣</button>
           <div id="auth-error"></div>
         </div>
       </div>
@@ -726,7 +731,7 @@
     </button>
   </nav>
 
-  <!-- KAI NEW ROOM CREATOR -->
+  <!-- KAI NEW ROOM CREATOR MODAL -->
   <div id="channel-create-modal">
     <div class="modal-content" style="border: 2px solid #7c3aed;">
       <div class="modal-header">
@@ -738,7 +743,7 @@
         
         <div class="form-group">
           <label>Group Chat Name</label>
-          <input type="text" id="new-channel-name" class="input-dark" placeholder="e.g. Saltwater Crew, Lake Hodges" />
+          <input type="text" id="new-channel-name" class="input-dark" placeholder="Channel Name" />
         </div>
 
         <div class="form-group">
@@ -754,7 +759,7 @@
     </div>
   </div>
 
-  <!-- CATCH LOGBOOK -->
+  <!-- CATCH LOGBOOK MODAL -->
   <div id="logbook-modal">
     <div class="modal-content" style="border: 2px solid #0ea5e9;">
       <div class="modal-header">
@@ -771,7 +776,7 @@
     </div>
   </div>
 
-  <!-- LOG A CATCH -->
+  <!-- LOG A CATCH MODAL -->
   <div id="catch-modal">
     <div class="modal-content" style="border: 2px solid #38bdf8;">
       <div class="modal-header">
@@ -837,7 +842,7 @@
     </div>
   </div>
 
-  <!-- PLAN A TRIP -->
+  <!-- PLAN A TRIP MODAL -->
   <div id="trip-modal">
     <div class="modal-content" style="border: 2px solid #059669;">
       <div class="modal-header">
@@ -887,7 +892,7 @@
     </div>
   </div>
 
-  <!-- TUTORIAL -->
+  <!-- TUTORIAL MODAL -->
   <div id="tutorial-modal">
     <div class="modal-content" style="border: 2px solid #38bdf8;">
       <div class="modal-header">
@@ -896,9 +901,10 @@
       </div>
       <div class="modal-body">
         <ul>
-          <li><strong>Zero Saved Logins:</strong> Credentials are never permanently saved in the browser. Every new session requires signing in fresh.</li>
-          <li><strong>Account Security:</strong> Your personal account password protects your handle, and each chat room has a room passcode.</li>
-          <li><strong>Mobile Mode:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side!</li>
+          <li><strong>Personal Account Protection:</strong> The first time you sign in with a handle, you set your own personal password. No one else can use your name without knowing your password!</li>
+          <li><strong>Room Passcode:</strong> Enter the designated passcode for the room you want to enter.</li>
+          <li><strong>Zero Saved Logins:</strong> For strict privacy and multi-user security, the app never auto-logs in when opening or refreshing.</li>
+          <li><strong>Mobile vs PC:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side!</li>
         </ul>
         <p style="text-align: center; margin-top: 8px;">
           <button class="btn" style="padding: 8px 20px; font-size: 0.9rem;" onclick="closeTutorialModal()">Let's Fish! 🎣</button>
@@ -907,6 +913,7 @@
     </div>
   </div>
 
+  <!-- BAROMETER GUIDE MODAL -->
   <div id="baro-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -948,9 +955,7 @@
     const seenMsgIds = new Set();
     const clientId = 'fish_scout_' + Math.random().toString(16).substring(2, 10);
 
-    // ==========================================
-    // HARDENED SECURITY STATE (RAM ONLY)
-    // ==========================================
+    // RAM-ONLY AUTHENTICATION STATE
     let currentActiveUser = null;
     let unlockedRoomsInRAM = new Set();
     let authLockoutUntil = 0;
@@ -1059,7 +1064,7 @@
         pendingSwitchTopic = targetTopic;
         document.getElementById('auth-overlay').style.display = 'flex';
         document.getElementById('auth-title-label').textContent = `Unlock ${channels[targetTopic]?.name || 'Chat'}`;
-        document.getElementById('auth-room-hint').textContent = `Enter account password and room passcode.`;
+        document.getElementById('auth-room-hint').textContent = `Enter your account password and this room's passcode.`;
         document.getElementById('auth-username').value = currentActiveUser || '';
         document.getElementById('auth-userpass').value = '';
         document.getElementById('auth-roompass').value = '';
@@ -1074,9 +1079,7 @@
       renderSavedHistory(currentTopic);
     }
 
-    // ==========================================
-    // RIGID MULTI-FACTOR PASSCODE ENGINE
-    // ==========================================
+    // STRICT AUTHENTICATION: Zero Passcode Leakage
     function handleAuthSubmit() {
       if (Date.now() < authLockoutUntil) {
         const waitSecs = Math.ceil((authLockoutUntil - Date.now()) / 1000);
@@ -1091,40 +1094,39 @@
       errBox.textContent = '';
 
       if (!nameInput || !userPassInput || !roomPassInput) {
-        errBox.textContent = 'All fields required (Name, Account Password, Room Code).';
+        errBox.textContent = 'Please enter Name, Account Password, and Room Passcode.';
         return;
       }
 
       const lowerName = nameInput.toLowerCase();
       const userVault = JSON.parse(localStorage.getItem('sec_user_vault') || '{}');
 
-      // 1. Authenticate Account Password
+      // 1. Verify / Set Personal Account Password
       if (userVault[lowerName]) {
         if (userVault[lowerName] !== userPassInput) {
-          errBox.textContent = 'Incorrect password for this user.';
+          errBox.textContent = 'Incorrect credentials. Access denied.';
           authLockoutUntil = Date.now() + 3000;
           playBeep(220, 'sawtooth', 0.25);
           return;
         }
       } else {
-        // Register new account password for this handle
         userVault[lowerName] = userPassInput;
         localStorage.setItem('sec_user_vault', JSON.stringify(userVault));
       }
 
-      // 2. Authenticate Room Passcode
+      // 2. Verify Room Passcode
       const targetRoomTopic = pendingSwitchTopic || currentTopic;
       const expectedPass = channels[targetRoomTopic]?.passcode || 'GV24';
 
       if (roomPassInput !== expectedPass) {
-        errBox.textContent = 'Incorrect room passcode. Access denied.';
+        errBox.textContent = 'Incorrect credentials. Access denied.';
         authLockoutUntil = Date.now() + 3000;
         playBeep(220, 'sawtooth', 0.25);
         document.getElementById('auth-roompass').value = '';
         return;
       }
 
-      // 3. Set RAM-ONLY session (never written to disk/storage)
+      // 3. Store authentication in RAM only
       currentActiveUser = nameInput;
       unlockedRoomsInRAM.add(targetRoomTopic);
 
@@ -1141,7 +1143,6 @@
       document.getElementById('display-username').textContent = currentActiveUser;
       document.getElementById('message-text').placeholder = `Text ${channels[currentTopic]?.name || '#chat'}...`;
 
-      // Show Admin features ONLY for verified Kai session
       const kaiBtn = document.getElementById('kai-add-room-btn');
       if (currentActiveUser && currentActiveUser.toLowerCase() === 'kai') {
         kaiBtn.style.display = 'inline-flex';
@@ -1158,7 +1159,6 @@
     }
 
     function handleExplicitLogout(noticeMsg = '') {
-      // Purge all memory variables
       currentActiveUser = null;
       unlockedRoomsInRAM.clear();
 
@@ -1169,13 +1169,12 @@
       document.getElementById('display-username').textContent = 'Not Signed In';
       document.getElementById('kai-add-room-btn').style.display = 'none';
       document.getElementById('auth-title-label').textContent = 'Angler Sign In';
-      document.getElementById('auth-room-hint').textContent = 'Enter your name, account password, and room code.';
+      document.getElementById('auth-room-hint').textContent = 'Type your handle, personal password, and room passcode.';
       document.getElementById('auth-overlay').style.display = 'flex';
       renderSavedHistory(currentTopic);
       if (noticeMsg) showToast("🔒 Locked");
     }
 
-    // MANDATORY: ALWAYS LOCK ON LOAD. ZERO PERSISTENT LOGINS.
     function enforceZeroPersistenceStartup() {
       handleExplicitLogout();
 
@@ -1702,7 +1701,6 @@
       }
     }
 
-    // MANDATORY STARTUP SEQUENCE
     window.addEventListener('DOMContentLoaded', () => {
       updateChannelDropdownUI();
       enforceZeroPersistenceStartup();
@@ -1715,6 +1713,10 @@
     });
 
     document.getElementById('auth-roompass').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleAuthSubmit();
+    });
+
+    document.getElementById('auth-userpass').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAuthSubmit();
     });
 
