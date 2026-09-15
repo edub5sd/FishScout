@@ -191,6 +191,8 @@
       line-height: 1;
     }
 
+    .modal-close-btn:hover { color: #f87171; }
+
     .modal-body p, .modal-body li {
       font-size: 0.82rem;
       line-height: 1.45;
@@ -404,11 +406,12 @@
       text-decoration: underline;
     }
 
+    /* HARDENED AUTH OVERLAY */
     #auth-overlay {
       position: absolute;
       inset: 0;
-      background: #000000;
-      z-index: 30;
+      background: rgba(0, 0, 0, 0.98);
+      z-index: 50;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -423,9 +426,10 @@
       flex-direction: column;
       gap: 10px;
       background: #18181b;
-      padding: 16px;
+      padding: 18px;
       border-radius: 12px;
-      border: 1px solid #27272a;
+      border: 1px solid #334155;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
     }
 
     .auth-box h2 { font-size: 1rem; color: #f8fafc; text-align: center; }
@@ -440,6 +444,8 @@
       font-size: 0.82rem;
       outline: none;
     }
+
+    .auth-input:focus { border-color: #38bdf8; }
 
     .auth-btn {
       background: #007aff;
@@ -678,14 +684,15 @@
         <button class="btn-link" onclick="handleExplicitLogout()">Log Out 🔒</button>
       </div>
 
-      <!-- PASSCODE LOCK / SIGN-IN OVERLAY -->
+      <!-- MANDATORY LOGIN & ROOM PASSCODE AUTH -->
       <div id="auth-overlay">
         <div class="auth-box">
           <h2 id="auth-title-label">Angler Sign In</h2>
-          <p id="auth-room-hint">Enter your name and the room passcode.</p>
+          <p id="auth-room-hint">Enter your name, account password, and room code.</p>
           <input type="text" id="auth-username" class="auth-input" placeholder="Your Name / Handle" autocomplete="off" />
-          <input type="password" id="auth-passcode" class="auth-input" placeholder="Room Passcode" autocomplete="new-password" />
-          <button class="auth-btn" onclick="handleAuthSubmit()">Enter Chat 🎣</button>
+          <input type="password" id="auth-userpass" class="auth-input" placeholder="Account Password (your secret)" autocomplete="new-password" />
+          <input type="password" id="auth-roompass" class="auth-input" placeholder="Room Passcode" autocomplete="new-password" />
+          <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Unlock Room 🎣</button>
           <div id="auth-error"></div>
         </div>
       </div>
@@ -889,9 +896,9 @@
       </div>
       <div class="modal-body">
         <ul>
-          <li><strong>Secure Sessions:</strong> For privacy, accounts auto-lock when closing the tab or after 10 minutes of inactivity. Always remember your room passcode!</li>
-          <li><strong>Mobile vs PC:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side.</li>
-          <li><strong>Phone Ding:</strong> When someone sends a text, your device sounds a bright chime and vibrates.</li>
+          <li><strong>Zero Saved Logins:</strong> Credentials are never permanently saved in the browser. Every new session requires signing in fresh.</li>
+          <li><strong>Account Security:</strong> Your personal account password protects your handle, and each chat room has a room passcode.</li>
+          <li><strong>Mobile Mode:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side!</li>
         </ul>
         <p style="text-align: center; margin-top: 8px;">
           <button class="btn" style="padding: 8px 20px; font-size: 0.9rem;" onclick="closeTutorialModal()">Let's Fish! 🎣</button>
@@ -936,29 +943,17 @@
     let currentTopic = 'green-valley-ward-fishing';
     let pendingSwitchTopic = null;
     let client = null;
-    let currentActiveUser = null;
     let currentCatchPhotoData = null;
     let activeLogbookView = 'crew';
     const seenMsgIds = new Set();
     const clientId = 'fish_scout_' + Math.random().toString(16).substring(2, 10);
 
-    // SECURITY ENGINE: Session-only memory for current user & unlocked rooms
-    let unlockedRoomsInSession = new Set();
-
-    // Inactivity Auto-Lock Timer (10 Minutes)
-    let autoLockTimeout = null;
-    function resetAutoLockTimer() {
-      clearTimeout(autoLockTimeout);
-      if (currentActiveUser) {
-        autoLockTimeout = setTimeout(() => {
-          handleExplicitLogout("Session timed out due to inactivity. Please sign in again.");
-        }, 10 * 60 * 1000);
-      }
-    }
-
-    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
-      window.addEventListener(evt, resetAutoLockTimer, { passive: true });
-    });
+    // ==========================================
+    // HARDENED SECURITY STATE (RAM ONLY)
+    // ==========================================
+    let currentActiveUser = null;
+    let unlockedRoomsInRAM = new Set();
+    let authLockoutUntil = 0;
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBeep(freq = 440, type = 'sine', duration = 0.15) {
@@ -1056,7 +1051,7 @@
       if (targetTopic === currentTopic) return;
 
       const isKai = currentActiveUser && currentActiveUser.toLowerCase() === 'kai';
-      const isAlreadyUnlocked = unlockedRoomsInSession.has(targetTopic);
+      const isAlreadyUnlocked = unlockedRoomsInRAM.has(targetTopic);
 
       if (isKai || isAlreadyUnlocked) {
         finishChannelSwitch(targetTopic);
@@ -1064,9 +1059,10 @@
         pendingSwitchTopic = targetTopic;
         document.getElementById('auth-overlay').style.display = 'flex';
         document.getElementById('auth-title-label').textContent = `Unlock ${channels[targetTopic]?.name || 'Chat'}`;
-        document.getElementById('auth-room-hint').textContent = `Enter the passcode for this group chat.`;
+        document.getElementById('auth-room-hint').textContent = `Enter account password and room passcode.`;
         document.getElementById('auth-username').value = currentActiveUser || '';
-        document.getElementById('auth-passcode').value = '';
+        document.getElementById('auth-userpass').value = '';
+        document.getElementById('auth-roompass').value = '';
         document.getElementById('auth-error').textContent = '';
       }
     }
@@ -1078,41 +1074,66 @@
       renderSavedHistory(currentTopic);
     }
 
-    // STRICT PASSCODE LOGIN (Uses sessionStorage so other people can't auto-log in)
+    // ==========================================
+    // RIGID MULTI-FACTOR PASSCODE ENGINE
+    // ==========================================
     function handleAuthSubmit() {
+      if (Date.now() < authLockoutUntil) {
+        const waitSecs = Math.ceil((authLockoutUntil - Date.now()) / 1000);
+        document.getElementById('auth-error').textContent = `Too many attempts. Locked for ${waitSecs}s.`;
+        return;
+      }
+
       const nameInput = document.getElementById('auth-username').value.trim();
-      const passInput = document.getElementById('auth-passcode').value.trim();
+      const userPassInput = document.getElementById('auth-userpass').value.trim();
+      const roomPassInput = document.getElementById('auth-roompass').value.trim();
       const errBox = document.getElementById('auth-error');
       errBox.textContent = '';
 
-      if (!nameInput) {
-        errBox.textContent = 'Please enter your handle.';
+      if (!nameInput || !userPassInput || !roomPassInput) {
+        errBox.textContent = 'All fields required (Name, Account Password, Room Code).';
         return;
       }
 
+      const lowerName = nameInput.toLowerCase();
+      const userVault = JSON.parse(localStorage.getItem('sec_user_vault') || '{}');
+
+      // 1. Authenticate Account Password
+      if (userVault[lowerName]) {
+        if (userVault[lowerName] !== userPassInput) {
+          errBox.textContent = 'Incorrect password for this user.';
+          authLockoutUntil = Date.now() + 3000;
+          playBeep(220, 'sawtooth', 0.25);
+          return;
+        }
+      } else {
+        // Register new account password for this handle
+        userVault[lowerName] = userPassInput;
+        localStorage.setItem('sec_user_vault', JSON.stringify(userVault));
+      }
+
+      // 2. Authenticate Room Passcode
       const targetRoomTopic = pendingSwitchTopic || currentTopic;
       const expectedPass = channels[targetRoomTopic]?.passcode || 'GV24';
-      
-      // Passcode is verified for all room entries
-      if (passInput !== expectedPass) {
-        errBox.textContent = 'Incorrect passcode. Access denied.';
+
+      if (roomPassInput !== expectedPass) {
+        errBox.textContent = 'Incorrect room passcode. Access denied.';
+        authLockoutUntil = Date.now() + 3000;
         playBeep(220, 'sawtooth', 0.25);
-        document.getElementById('auth-passcode').value = '';
+        document.getElementById('auth-roompass').value = '';
         return;
       }
 
+      // 3. Set RAM-ONLY session (never written to disk/storage)
       currentActiveUser = nameInput;
-      // STORE IN SESSION ONLY: Disappears when browser or tab closes
-      sessionStorage.setItem('spot_finder_active_user', currentActiveUser);
-      unlockedRoomsInSession.add(targetRoomTopic);
+      unlockedRoomsInRAM.add(targetRoomTopic);
 
       if (pendingSwitchTopic) {
         finishChannelSwitch(pendingSwitchTopic);
       }
 
       completeLogin();
-      resetAutoLockTimer();
-      showToast("🎣 Session authenticated!");
+      showToast("🛡️ Authentication verified!");
     }
 
     function completeLogin() {
@@ -1120,6 +1141,7 @@
       document.getElementById('display-username').textContent = currentActiveUser;
       document.getElementById('message-text').placeholder = `Text ${channels[currentTopic]?.name || '#chat'}...`;
 
+      // Show Admin features ONLY for verified Kai session
       const kaiBtn = document.getElementById('kai-add-room-btn');
       if (currentActiveUser && currentActiveUser.toLowerCase() === 'kai') {
         kaiBtn.style.display = 'inline-flex';
@@ -1136,32 +1158,26 @@
     }
 
     function handleExplicitLogout(noticeMsg = '') {
+      // Purge all memory variables
       currentActiveUser = null;
-      unlockedRoomsInSession.clear();
-      sessionStorage.removeItem('spot_finder_active_user');
-      clearTimeout(autoLockTimeout);
+      unlockedRoomsInRAM.clear();
 
       document.getElementById('auth-username').value = '';
-      document.getElementById('auth-passcode').value = '';
+      document.getElementById('auth-userpass').value = '';
+      document.getElementById('auth-roompass').value = '';
       document.getElementById('auth-error').textContent = noticeMsg;
       document.getElementById('display-username').textContent = 'Not Signed In';
       document.getElementById('kai-add-room-btn').style.display = 'none';
       document.getElementById('auth-title-label').textContent = 'Angler Sign In';
+      document.getElementById('auth-room-hint').textContent = 'Enter your name, account password, and room code.';
       document.getElementById('auth-overlay').style.display = 'flex';
       renderSavedHistory(currentTopic);
       if (noticeMsg) showToast("🔒 Locked");
     }
 
-    // CHECK SESSION: Ensures no lingering credentials exist when another person loads the page
-    function checkActiveSession() {
-      const activeSession = sessionStorage.getItem('spot_finder_active_user');
-      if (activeSession) {
-        currentActiveUser = activeSession;
-        unlockedRoomsInSession.add(currentTopic);
-        completeLogin();
-      } else {
-        handleExplicitLogout();
-      }
+    // MANDATORY: ALWAYS LOCK ON LOAD. ZERO PERSISTENT LOGINS.
+    function enforceZeroPersistenceStartup() {
+      handleExplicitLogout();
 
       const seenTutorial = localStorage.getItem('has_seen_tutorial');
       if (!seenTutorial) {
@@ -1686,9 +1702,10 @@
       }
     }
 
+    // MANDATORY STARTUP SEQUENCE
     window.addEventListener('DOMContentLoaded', () => {
       updateChannelDropdownUI();
-      checkActiveSession();
+      enforceZeroPersistenceStartup();
       initChat();
       fetchWeather('Poway');
     });
@@ -1697,7 +1714,7 @@
       if (e.key === 'Enter') fetchWeatherUserTrigger();
     });
 
-    document.getElementById('auth-passcode').addEventListener('keydown', (e) => {
+    document.getElementById('auth-roompass').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAuthSubmit();
     });
 
