@@ -305,7 +305,6 @@
       object-fit: cover;
     }
 
-    /* Logbook Switcher Tabs */
     .logbook-tabs {
       display: flex;
       gap: 8px;
@@ -850,7 +849,6 @@
     </div>
 
     <div class="header-actions">
-      <!-- Full External Database Bypass -->
       <a href="https://fishbrain.com/discover" target="_blank" rel="noopener noreferrer" class="btn" style="background:#0284c7;" title="Open complete worldwide fish directory">🌐 Full Fishbrain</a>
       
       <button class="btn" style="background:#6366f1;" onclick="openReminderModal()">⏰ Set Reminder</button>
@@ -897,13 +895,14 @@
         <button class="btn-link" onclick="switchAccount()">Switch Account</button>
       </div>
 
+      <!-- CHAT ENTRY WITH CREW PASSCODE (GV24) -->
       <div id="auth-overlay">
         <div class="auth-box">
           <h2>Angler Sign In</h2>
-          <p>Create a name and passcode, or log back in.</p>
+          <p>Enter your handle and the crew chat passcode to join.</p>
           <input type="text" id="auth-username" class="auth-input" placeholder="Your Name / Handle" autocomplete="off" />
-          <input type="password" id="auth-passcode" class="auth-input" placeholder="Passcode (any numbers/letters)" />
-          <button class="auth-btn" onclick="handleAuthSubmit()">Sign In / Create</button>
+          <input type="password" id="auth-passcode" class="auth-input" placeholder="Crew Passcode" />
+          <button class="auth-btn" onclick="handleAuthSubmit()">Enter Chat 🎣</button>
           <div id="auth-error"></div>
         </div>
       </div>
@@ -1113,7 +1112,8 @@
       <div class="modal-body">
         <p><strong>Quick Start Guide for Anglers:</strong></p>
         <ul>
-          <li><strong>See All Catches:</strong> Click <strong>🌐 Full Fishbrain</strong> in the top bar to browse the complete directory with thousands of catches and spots. Inside the app map, tap directly on any lake's blue or green pin to view all catches on that water!</li>
+          <li><strong>Chat Passcode:</strong> Enter your handle and the crew passcode <code>GV24</code> to enter the chat.</li>
+          <li><strong>See All Catches:</strong> Click <strong>🌐 Full Fishbrain</strong> in the top bar to browse the complete directory with thousands of catches and spots.</li>
           <li><strong>All Crew Catches:</strong> Click <strong>📖 All Catches</strong> to view every fish landed and shared by everyone in the crew.</li>
           <li><strong>Group Reminders:</strong> Click <strong>⏰ Set Reminder</strong> or type <code>/remind 10 Check line</code> in chat to sound a synchronized crew alarm.</li>
           <li><strong>Check Weather & Barometer:</strong> Type any location and click <strong>Weather</strong> to check conditions and atmospheric pressure trends.</li>
@@ -1194,6 +1194,8 @@
   <div id="egg-toast"></div>
 
   <script>
+    const CREW_PASSCODE = 'GV24';
+
     let client = null;
     let currentTopic = 'green-valley-ward-fishing';
     let currentActiveUser = null;
@@ -1460,7 +1462,6 @@
       reader.readAsDataURL(file);
     }
 
-    // SAVE CATCH AND STORE IN ALL CREW HISTORY
     function saveCatch() {
       const species = document.getElementById('catch-species').value.trim();
       const weight = document.getElementById('catch-weight').value.trim() || 'Unmeasured';
@@ -1484,7 +1485,6 @@
         date: new Date().toLocaleDateString()
       };
 
-      // Always save to personal logbook
       if (dest === 'logbook' || dest === 'both') {
         const storeKey = `user_catches_${currentActiveUser.toLowerCase()}`;
         const myCatches = JSON.parse(localStorage.getItem(storeKey) || '[]');
@@ -1492,12 +1492,10 @@
         localStorage.setItem(storeKey, JSON.stringify(myCatches));
       }
 
-      // Save to shared crew catch archive
       const allCrew = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
       allCrew.unshift(catchData);
       localStorage.setItem('all_crew_catches_archive', JSON.stringify(allCrew));
 
-      // Broadcast payload to chat
       if (dest === 'chat' || dest === 'both') {
         const catchText = `🏆 [CATCH LOGGED]\n🐟 Species: ${species}\n⚖️ Weight: ${weight}\n📍 Spot: ${spot}${lure ? `\n🪱 Lure: ${lure}` : ''}`;
         sendCustomMessage(catchText, false, true, currentCatchPhotoData, false, catchData);
@@ -1508,7 +1506,6 @@
       spawnConfetti(['🐟', '🏆', '⭐', '🎣']);
     }
 
-    // TOGGLE BETWEEN CREW AND PERSONAL LOGBOOK
     function switchLogbookView(view) {
       activeLogbookView = view;
       document.getElementById('tab-crew').classList.toggle('active', view === 'crew');
@@ -1606,45 +1603,32 @@
       return `${datePart} • ${timePart}`;
     }
 
+    // ----------------------------------------------------
+    // PASSCODE GATE (GV24)
+    // ----------------------------------------------------
     function handleAuthSubmit() {
       const nameInput = document.getElementById('auth-username').value.trim();
       const passInput = document.getElementById('auth-passcode').value.trim();
       const errBox = document.getElementById('auth-error');
       errBox.textContent = '';
 
-      if (!nameInput || !passInput) {
-        errBox.textContent = 'Please enter both a name and a passcode.';
+      if (!nameInput) {
+        errBox.textContent = 'Please enter your name or handle.';
         return;
       }
 
-      if (nameInput.toLowerCase() === 'captain ahab') {
-        showToast("⚓ <strong>Easter Egg #8:</strong> Ahab has taken the helm!");
-        playBeep(220, 'sawtooth', 0.6);
-      }
-      if (nameInput.toLowerCase() === 'poseidon') {
-        showToast("🔱 <strong>Easter Egg #9:</strong> Lord of the Oceans has joined!");
-        spawnConfetti(['🔱', '⚡', '🌊']);
+      // Check passcode requirement
+      if (passInput !== CREW_PASSCODE) {
+        errBox.textContent = 'Incorrect passcode! Enter the crew code (GV24).';
+        playBeep(220, 'sawtooth', 0.25);
+        return;
       }
 
-      const accounts = JSON.parse(localStorage.getItem('app_registered_accounts') || '{}');
-      const lowerName = nameInput.toLowerCase();
-
-      if (accounts[lowerName]) {
-        if (accounts[lowerName].passcode !== passInput) {
-          errBox.textContent = 'Incorrect passcode for this name.';
-          return;
-        }
-      } else {
-        accounts[lowerName] = {
-          displayName: nameInput,
-          passcode: passInput
-        };
-        localStorage.setItem('app_registered_accounts', JSON.stringify(accounts));
-      }
-
-      currentActiveUser = accounts[lowerName].displayName;
+      currentActiveUser = nameInput;
       localStorage.setItem('app_active_session_user', currentActiveUser);
       completeLogin();
+      showToast("🎣 Welcome to the crew chat!");
+      spawnConfetti(['🎣', '🌊', '🐟']);
     }
 
     function completeLogin() {
@@ -1740,7 +1724,6 @@
           return;
         }
 
-        // Auto-save any catch broadcasted by others into the local crew archive
         if (payload.catchData) {
           const allCrew = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
           if (!allCrew.some(c => c.id === payload.catchData.id)) {
