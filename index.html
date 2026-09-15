@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fishbrain Scout & Live Chat</title>
+  <title>Spot Finder & Live Crew Chat</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <style>
     * {
@@ -23,17 +23,10 @@
       transition: filter 0.4s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    .barrel-rolling {
-      animation: fullRoll 1s ease-in-out forwards;
-    }
-    @keyframes fullRoll {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    .barrel-rolling { animation: fullRoll 1s ease-in-out forwards; }
+    @keyframes fullRoll { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    .earthquake {
-      animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite;
-    }
+    .earthquake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite; }
     @keyframes shake {
       10%, 90% { transform: translate3d(-3px, 0, 0); }
       20%, 80% { transform: translate3d(5px, 0, 0); }
@@ -41,13 +34,8 @@
       40%, 60% { transform: translate3d(6px, 0, 0); }
     }
 
-    .retro-synth {
-      filter: contrast(150%) hue-rotate(280deg) saturate(200%) !important;
-    }
-
-    .upside-down {
-      transform: rotate(180deg) !important;
-    }
+    .retro-synth { filter: contrast(150%) hue-rotate(280deg) saturate(200%) !important; }
+    .upside-down { transform: rotate(180deg) !important; }
 
     header {
       background: #1e293b;
@@ -77,9 +65,7 @@
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    .brand h1:active {
-      transform: scale(0.92);
-    }
+    .brand h1:active { transform: scale(0.92); }
 
     .badge {
       background: rgba(56, 189, 248, 0.15);
@@ -111,9 +97,7 @@
       transition: border-color 0.2s;
     }
 
-    .input-dark:focus {
-      border-color: #38bdf8;
-    }
+    .input-dark:focus { border-color: #38bdf8; }
 
     .btn {
       background: #007aff;
@@ -178,7 +162,7 @@
     }
 
     /* Modals */
-    #baro-modal, #tutorial-modal, #trip-modal, #catch-modal, #logbook-modal, #reminder-modal {
+    #baro-modal, #tutorial-modal, #trip-modal, #catch-modal, #logbook-modal, #channel-create-modal {
       display: none;
       position: fixed;
       inset: 0;
@@ -276,11 +260,7 @@
       transition: border-color 0.2s, background 0.2s;
     }
 
-    .destination-radio-label input {
-      margin: 0;
-      cursor: pointer;
-    }
-
+    .destination-radio-label input { margin: 0; cursor: pointer; }
     .destination-radio-label:has(input:checked) {
       border-color: #38bdf8;
       background: rgba(56, 189, 248, 0.12);
@@ -299,18 +279,9 @@
       background: #090d16;
     }
 
-    .preview-box img {
-      max-width: 100%;
-      max-height: 160px;
-      object-fit: cover;
-    }
+    .preview-box img { max-width: 100%; max-height: 160px; object-fit: cover; }
 
-    .logbook-tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
+    .logbook-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
     .logbook-tab-btn {
       flex: 1;
       padding: 8px 12px;
@@ -323,19 +294,9 @@
       cursor: pointer;
       transition: all 0.2s;
     }
+    .logbook-tab-btn.active { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
 
-    .logbook-tab-btn.active {
-      background: #0284c7;
-      color: #ffffff;
-      border-color: #38bdf8;
-    }
-
-    .logbook-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
+    .logbook-grid { display: flex; flex-direction: column; gap: 12px; }
     .logbook-card {
       background: #0f172a;
       border: 1px solid #334155;
@@ -345,7 +306,6 @@
       gap: 12px;
       position: relative;
     }
-
     .logbook-card img {
       width: 95px;
       height: 95px;
@@ -353,7 +313,6 @@
       border-radius: 6px;
       border: 1px solid #334155;
     }
-
     .logbook-details {
       flex: 1;
       display: flex;
@@ -361,53 +320,13 @@
       gap: 3px;
       font-size: 0.8rem;
     }
+    .logbook-details strong { color: #38bdf8; font-size: 0.95rem; }
+    .logbook-empty { text-align: center; padding: 30px 10px; color: #64748b; font-size: 0.85rem; }
 
-    .logbook-details strong {
-      color: #38bdf8;
-      font-size: 0.95rem;
-    }
-
-    .logbook-empty {
-      text-align: center;
-      padding: 30px 10px;
-      color: #64748b;
-      font-size: 0.85rem;
-    }
-
-    #reminders-bar {
-      display: none;
-      background: #1e1b4b;
-      border-bottom: 1px solid #4338ca;
-      padding: 6px 12px;
-      font-size: 0.78rem;
-      color: #c7d2fe;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      z-index: 8;
-    }
-
-    .guide-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8rem;
-      margin-bottom: 10px;
-    }
-
-    .guide-table th, .guide-table td {
-      border: 1px solid #334155;
-      padding: 7px 10px;
-      text-align: left;
-    }
-
-    .guide-table th {
-      background: #1e293b;
-      color: #38bdf8;
-    }
-
-    .guide-table tr:nth-child(even) {
-      background: rgba(255, 255, 255, 0.02);
-    }
+    .guide-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 10px; }
+    .guide-table th, .guide-table td { border: 1px solid #334155; padding: 7px 10px; text-align: left; }
+    .guide-table th { background: #1e293b; color: #38bdf8; }
+    .guide-table tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
 
     #main-wrapper {
       display: flex;
@@ -427,14 +346,8 @@
       transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
     }
 
-    #chat-sidebar.collapsed {
-      width: 0 !important;
-      border-right: none;
-    }
-
-    #chat-sidebar.collapsed > * {
-      display: none !important;
-    }
+    #chat-sidebar.collapsed { width: 0 !important; border-right: none; }
+    #chat-sidebar.collapsed > * { display: none !important; }
 
     #collapse-tab {
       position: absolute;
@@ -456,14 +369,8 @@
       transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
     }
 
-    #collapse-tab:hover {
-      background: #334155;
-      color: #7dd3fc;
-    }
-
-    #collapse-tab.collapsed-pos {
-      left: 0 !important;
-    }
+    #collapse-tab:hover { background: #334155; color: #7dd3fc; }
+    #collapse-tab.collapsed-pos { left: 0 !important; }
 
     .chat-header {
       padding: 10px 14px;
@@ -473,6 +380,20 @@
       align-items: center;
       justify-content: space-between;
       font-size: 0.82rem;
+      gap: 8px;
+    }
+
+    .channel-picker {
+      background: #09090b;
+      border: 1px solid #3f3f46;
+      color: #38bdf8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 3px 6px;
+      outline: none;
+      cursor: pointer;
+      max-width: 170px;
     }
 
     .status-dot {
@@ -512,7 +433,6 @@
       cursor: pointer;
       text-decoration: underline;
     }
-
     .btn-link:hover { color: #f8fafc; }
 
     #auth-overlay {
@@ -538,18 +458,8 @@
       border: 1px solid #27272a;
     }
 
-    .auth-box h2 {
-      font-size: 1.05rem;
-      color: #f8fafc;
-      text-align: center;
-    }
-
-    .auth-box p {
-      font-size: 0.74rem;
-      color: #94a3b8;
-      text-align: center;
-      margin-bottom: 6px;
-    }
+    .auth-box h2 { font-size: 1.05rem; color: #f8fafc; text-align: center; }
+    .auth-box p { font-size: 0.74rem; color: #94a3b8; text-align: center; margin-bottom: 6px; }
 
     .auth-input {
       background: #09090b;
@@ -560,10 +470,7 @@
       font-size: 0.85rem;
       outline: none;
     }
-
-    .auth-input:focus {
-      border-color: #007aff;
-    }
+    .auth-input:focus { border-color: #007aff; }
 
     .auth-btn {
       background: #007aff;
@@ -577,14 +484,14 @@
       margin-top: 4px;
       transition: background 0.2s;
     }
-
     .auth-btn:hover { background: #0062cc; }
 
     #auth-error {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       color: #f87171;
       text-align: center;
       min-height: 16px;
+      font-weight: 600;
     }
 
     .chat-messages {
@@ -604,44 +511,23 @@
       max-width: 82%;
     }
 
-    .message-group.theirs {
-      align-self: flex-start;
-      align-items: flex-start;
-    }
-
+    .message-group.theirs { align-self: flex-start; align-items: flex-start; }
     .message-group.theirs .bubble {
       background-color: #26252a;
       color: #ffffff;
       border-radius: 18px 18px 18px 4px;
     }
+    .message-group.theirs .msg-sender { color: #a1a1aa; margin-left: 8px; }
 
-    .message-group.theirs .msg-sender {
-      color: #a1a1aa;
-      margin-left: 8px;
-    }
-
-    .message-group.mine {
-      align-self: flex-end;
-      align-items: flex-end;
-    }
-
+    .message-group.mine { align-self: flex-end; align-items: flex-end; }
     .message-group.mine .bubble {
       background-color: #007aff;
       color: #ffffff;
       border-radius: 18px 18px 4px 18px;
     }
+    .message-group.mine .msg-sender { color: #93c5fd; margin-right: 8px; }
 
-    .message-group.mine .msg-sender {
-      color: #93c5fd;
-      margin-right: 8px;
-    }
-
-    .msg-sender {
-      font-size: 0.68rem;
-      font-weight: 600;
-      margin-bottom: 3px;
-    }
-
+    .msg-sender { font-size: 0.68rem; font-weight: 600; margin-bottom: 3px; }
     .bubble {
       padding: 8px 13px;
       font-size: 0.88rem;
@@ -663,13 +549,6 @@
       padding: 10px 12px;
     }
 
-    .bubble.reminder-card {
-      background: linear-gradient(135deg, #4338ca, #6366f1) !important;
-      border: 1px solid #a5b4fc;
-      box-shadow: 0 2px 12px rgba(99, 102, 241, 0.4);
-      padding: 10px 12px;
-    }
-
     .catch-photo {
       width: 100%;
       border-radius: 8px;
@@ -678,19 +557,9 @@
       border: 1px solid rgba(255,255,255,0.2);
     }
 
-    .msg-time {
-      font-size: 0.65rem;
-      color: #71717a;
-      margin-top: 3px;
-    }
-
-    .message-group.mine .msg-time {
-      margin-right: 6px;
-    }
-
-    .message-group.theirs .msg-time {
-      margin-left: 6px;
-    }
+    .msg-time { font-size: 0.65rem; color: #71717a; margin-top: 3px; }
+    .message-group.mine .msg-time { margin-right: 6px; }
+    .message-group.theirs .msg-time { margin-left: 6px; }
 
     .chat-compose {
       padding: 10px 12px;
@@ -711,10 +580,7 @@
       font-size: 0.88rem;
       outline: none;
     }
-
-    .sms-input:focus {
-      border-color: #007aff;
-    }
+    .sms-input:focus { border-color: #007aff; }
 
     .sms-send-btn {
       width: 32px;
@@ -731,11 +597,7 @@
       font-weight: bold;
       transition: transform 0.15s, background 0.2s;
     }
-
-    .sms-send-btn:hover {
-      background: #0062cc;
-      transform: scale(1.05);
-    }
+    .sms-send-btn:hover { background: #0062cc; transform: scale(1.05); }
 
     #map-container {
       flex: 1;
@@ -744,37 +606,7 @@
       background: #0b1120;
     }
 
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    #alert-banner-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 250;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      backdrop-filter: blur(8px);
-    }
-
-    .alert-card {
-      background: #1e1b4b;
-      border: 2px solid #818cf8;
-      border-radius: 14px;
-      padding: 24px;
-      max-width: 440px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 0 40px rgba(99, 102, 241, 0.6);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+    iframe { width: 100%; height: 100%; border: none; }
 
     #game-modal {
       display: none;
@@ -845,13 +677,13 @@
   <header>
     <div class="brand">
       <h1 id="app-title-btn" title="Spot Finder">🎣 Spot Finder</h1>
-      <span class="badge" id="secret-admin-trigger">Powered by Fishbrain</span>
+      <span class="badge" id="secret-admin-trigger">Crew Edition</span>
     </div>
 
     <div class="header-actions">
-      <a href="https://fishbrain.com/discover" target="_blank" rel="noopener noreferrer" class="btn" style="background:#0284c7;" title="Open complete worldwide fish directory">🌐 Full Fishbrain</a>
+      <!-- Admin Create Channel Button (Visible to Kai) -->
+      <button id="kai-add-room-btn" class="btn" style="background:#7c3aed; display:none;" onclick="openCreateChannelModal()">➕ New Group Chat</button>
       
-      <button class="btn" style="background:#6366f1;" onclick="openReminderModal()">⏰ Set Reminder</button>
       <button class="btn" style="background:#0284c7;" onclick="openCatchModal()">🐟 Log Catch</button>
       <button class="btn" style="background:#0ea5e9;" onclick="openLogbookModal()">📖 All Catches</button>
       <button class="btn" style="background:#059669;" onclick="openTripModal()">📍 Plan Trip</button>
@@ -868,11 +700,6 @@
     </div>
   </header>
 
-  <div id="reminders-bar">
-    <span id="next-reminder-text">⏰ Upcoming: None</span>
-    <button class="btn-link" onclick="dismissUpcomingReminder()" style="color:#a5b4fc;">Clear</button>
-  </div>
-
   <div id="main-wrapper">
     <div id="collapse-tab" onclick="toggleChatSidebar()" title="Collapse/Expand Chat">
       <span id="collapse-icon">◀</span>
@@ -884,7 +711,9 @@
           <span id="conn-dot" class="status-dot" style="cursor:pointer;" title="Status"></span>
           <span id="conn-text" style="color:#d4d4d8;">Connecting...</span>
         </span>
-        <span id="channel-name-tag" style="font-size: 0.72rem; color: #38bdf8; font-weight: 600; cursor:pointer;">#green-valley-ward-fishing</span>
+        
+        <!-- Room Selector Dropdown -->
+        <select id="channel-dropdown" class="channel-picker" onchange="handleChannelSwitch(this.value)"></select>
       </div>
 
       <div class="user-account-bar">
@@ -895,13 +724,13 @@
         <button class="btn-link" onclick="switchAccount()">Switch Account</button>
       </div>
 
-      <!-- CHAT ENTRY WITH CREW PASSCODE (GV24) -->
+      <!-- CHAT ENTRY WITH PASSCODE -->
       <div id="auth-overlay">
         <div class="auth-box">
           <h2>Angler Sign In</h2>
-          <p>Enter your handle and the crew chat passcode to join.</p>
+          <p id="auth-room-hint">Enter your handle and this room's passcode to join.</p>
           <input type="text" id="auth-username" class="auth-input" placeholder="Your Name / Handle" autocomplete="off" />
-          <input type="password" id="auth-passcode" class="auth-input" placeholder="Crew Passcode" />
+          <input type="password" id="auth-passcode" class="auth-input" placeholder="Room Passcode" />
           <button class="auth-btn" onclick="handleAuthSubmit()">Enter Chat 🎣</button>
           <div id="auth-error"></div>
         </div>
@@ -910,19 +739,47 @@
       <div id="messages-box" class="chat-messages"></div>
 
       <div class="chat-compose">
-        <input type="text" id="message-text" class="sms-input" placeholder="Text #green-valley-ward-fishing... (or try /remind 10 Pack lures)" />
+        <input type="text" id="message-text" class="sms-input" placeholder="Text crew..." />
         <button class="sms-send-btn" onclick="sendMessage()" title="Send">↑</button>
       </div>
     </aside>
 
     <main id="map-container">
       <iframe 
-        id="fishbrain-frame"
+        id="map-frame"
         src="https://take-me-fishing.fishbrain.com/en-embedded/" 
         allow="geolocation; camera; microphone"
-        title="Take Me Fishing & Fishbrain Map">
+        title="Interactive Fishing Map">
       </iframe>
     </main>
+  </div>
+
+  <!-- KAI'S GROUP CHAT CREATION MODAL -->
+  <div id="channel-create-modal">
+    <div class="modal-content" style="border: 2px solid #7c3aed;">
+      <div class="modal-header">
+        <h3 style="color:#c4b5fd;">➕ Create New Group Chat</h3>
+        <button class="modal-close-btn" onclick="closeCreateChannelModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px;">Create custom channels with dedicated passcodes for different crews or friend groups.</p>
+        
+        <div class="form-group">
+          <label>Group Chat Name</label>
+          <input type="text" id="new-channel-name" class="input-dark" placeholder="e.g. Bass Masters, San Diego Saltwater, Lake Hodges Crew" />
+        </div>
+
+        <div class="form-group">
+          <label>Set Room Passcode</label>
+          <input type="text" id="new-channel-pass" class="input-dark" placeholder="e.g. BASS99, SHARK2026, PIER" />
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn" style="flex:1; background:#7c3aed;" onclick="createChannelSubmit()">Create &amp; Publish Room 🚀</button>
+          <button class="btn" style="background:#334155;" onclick="closeCreateChannelModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- CATCH LOGBOOK & CREW ARCHIVE -->
@@ -939,51 +796,6 @@
         </div>
         <div id="logbook-container" class="logbook-grid"></div>
       </div>
-    </div>
-  </div>
-
-  <!-- GROUP REMINDER MODAL -->
-  <div id="reminder-modal">
-    <div class="modal-content" style="border: 2px solid #6366f1;">
-      <div class="modal-header">
-        <h3 style="color:#a5b4fc;">⏰ Schedule Group Reminder</h3>
-        <button class="modal-close-btn" onclick="closeReminderModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px;">Set an alert for the entire crew. When the timer expires, everyone's app chimes with a pop-up!</p>
-
-        <div class="form-group">
-          <label>Reminder Note / Mission</label>
-          <input type="text" id="reminder-note" class="input-dark" placeholder="e.g. Leave for Lake Poway, Buy nightcrawlers, Check boat battery" />
-        </div>
-
-        <div style="display:flex; gap:10px;">
-          <div class="form-group" style="flex:1;">
-            <label>Countdown Minutes</label>
-            <input type="number" id="reminder-minutes" class="input-dark" min="1" value="15" placeholder="Minutes" />
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>Or Exact Alarm Time</label>
-            <input type="time" id="reminder-time-input" class="input-dark" />
-          </div>
-        </div>
-
-        <div style="display:flex; gap:8px; margin-top:12px;">
-          <button class="btn" style="flex:1; background:#6366f1;" onclick="scheduleGroupReminder()">Broadcast Reminder ⏰</button>
-          <button class="btn" style="background:#334155;" onclick="closeReminderModal()">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ALARM TRIGGER BANNER -->
-  <div id="alert-banner-modal">
-    <div class="alert-card">
-      <div style="font-size:2.4rem;">⏰ 🚨</div>
-      <h2 style="color:#818cf8; font-size:1.3rem;">CREW REMINDER ALARM!</h2>
-      <p id="alert-banner-text" style="font-size:1.05rem; font-weight:700; color:#ffffff;"></p>
-      <span id="alert-banner-sender" style="font-size:0.75rem; color:#a5b4fc;"></span>
-      <button class="btn" style="background:#4f46e5; margin-top:8px; padding:10px;" onclick="dismissTriggeredAlarm()">Got It! 👍</button>
     </div>
   </div>
 
@@ -1103,6 +915,7 @@
     </div>
   </div>
 
+  <!-- TUTORIAL MODAL -->
   <div id="tutorial-modal" style="display: flex;">
     <div class="modal-content" style="border: 2px solid #38bdf8;">
       <div class="modal-header">
@@ -1112,10 +925,11 @@
       <div class="modal-body">
         <p><strong>Quick Start Guide for Anglers:</strong></p>
         <ul>
-          <li><strong>Chat Passcode:</strong> Enter your handle and the crew passcode <code>GV24</code> to enter the chat.</li>
-          <li><strong>See All Catches:</strong> Click <strong>🌐 Full Fishbrain</strong> in the top bar to browse the complete directory with thousands of catches and spots.</li>
+          <li><strong>Chat Passcode:</strong> Enter your handle and the correct room passcode to unlock that chat.</li>
+          <li><strong>Phone Chime / Ding:</strong> Whenever anyone texts the group, your device chimes, vibrates, and gives a notification.</li>
+          <li><strong>Multiple Group Chats:</strong> Switch rooms via the dropdown. Kai can click <strong>➕ New Group Chat</strong> to create custom rooms with private passcodes!</li>
           <li><strong>All Crew Catches:</strong> Click <strong>📖 All Catches</strong> to view every fish landed and shared by everyone in the crew.</li>
-          <li><strong>Group Reminders:</strong> Click <strong>⏰ Set Reminder</strong> or type <code>/remind 10 Check line</code> in chat to sound a synchronized crew alarm.</li>
+          <li><strong>Scout the Map:</strong> Use the interactive embedded map to explore local lakes, boat ramps, and hotspots.</li>
           <li><strong>Check Weather & Barometer:</strong> Type any location and click <strong>Weather</strong> to check conditions and atmospheric pressure trends.</li>
         </ul>
         <p style="text-align: center; margin-top: 10px;">
@@ -1194,16 +1008,22 @@
   <div id="egg-toast"></div>
 
   <script>
-    const CREW_PASSCODE = 'GV24';
+    // Group Chat Rooms Store
+    const DEFAULT_ROOMS = {
+      'green-valley-ward-fishing': {
+        name: '#green-valley-ward-fishing',
+        topic: 'green-valley-ward-fishing',
+        passcode: 'GV24'
+      }
+    };
 
-    let client = null;
+    let channels = JSON.parse(localStorage.getItem('app_group_channels') || JSON.stringify(DEFAULT_ROOMS));
     let currentTopic = 'green-valley-ward-fishing';
+    let client = null;
     let currentActiveUser = null;
     let currentCatchPhotoData = null;
     let activeLogbookView = 'crew';
     const seenMsgIds = new Set();
-    const scheduledReminders = new Map();
-    let alarmChimeInterval = null;
     const clientId = 'fish_app_' + Math.random().toString(16).substring(2, 10);
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1223,44 +1043,48 @@
       } catch (e) {}
     }
 
-    function playAlarmSiren() {
-      let step = 0;
-      clearInterval(alarmChimeInterval);
-      alarmChimeInterval = setInterval(() => {
-        playBeep(step % 2 === 0 ? 880 : 660, 'square', 0.2);
-        step++;
-      }, 250);
-    }
+    // Two-tone bright notification chime whenever someone texts
+    function playIncomingDing() {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
 
-    function stopAlarmSiren() {
-      clearInterval(alarmChimeInterval);
+        // Note 1: E6
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1318.51, now);
+        gain1.gain.setValueAtTime(0.25, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.12);
+
+        // Note 2: B6 (higher ding)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1975.53, now + 0.08);
+        gain2.gain.setValueAtTime(0.3, now + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.08);
+        osc2.stop(now + 0.35);
+
+        // Phone vibration API for mobile devices
+        if ("vibrate" in navigator) {
+          navigator.vibrate([120, 60, 120]);
+        }
+      } catch (e) {}
     }
 
     const permanentIntroMessages = [
-      {
-        id: "intro_1",
-        sender: "kai",
-        text: "hi",
-        time: "Sun, Sep 13 • 04:05 PM"
-      },
-      {
-        id: "intro_2",
-        sender: "kai",
-        text: "this is my app",
-        time: "Sun, Sep 13 • 04:05 PM"
-      },
-      {
-        id: "intro_3",
-        sender: "kai",
-        text: "you can find fishing spots around the world and see what people have caught there",
-        time: "Sun, Sep 13 • 04:06 PM"
-      },
-      {
-        id: "intro_4",
-        sender: "kai",
-        text: "and check the weather",
-        time: "Sun, Sep 13 • 04:06 PM"
-      }
+      { id: "intro_1", sender: "kai", text: "hi", time: "Sun, Sep 13 • 04:05 PM" },
+      { id: "intro_2", sender: "kai", text: "this is my app", time: "Sun, Sep 13 • 04:05 PM" },
+      { id: "intro_3", sender: "kai", text: "you can find fishing spots around the world and see what people have caught there", time: "Sun, Sep 13 • 04:06 PM" },
+      { id: "intro_4", sender: "kai", text: "and check the weather", time: "Sun, Sep 13 • 04:06 PM" }
     ];
 
     function showToast(msg, sound = true) {
@@ -1271,39 +1095,57 @@
       setTimeout(() => { toast.style.display = 'none'; }, 4000);
     }
 
-    function openTutorialModal() {
-      document.getElementById('tutorial-modal').style.display = 'flex';
+    function updateChannelDropdownUI() {
+      const dropdown = document.getElementById('channel-dropdown');
+      dropdown.innerHTML = '';
+      Object.keys(channels).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = channels[key].name;
+        if (key === currentTopic) opt.selected = true;
+        dropdown.appendChild(opt);
+      });
+      document.getElementById('message-text').placeholder = `Text ${channels[currentTopic]?.name || '#chat'}...`;
     }
 
+    function handleChannelSwitch(newTopic) {
+      if (newTopic === currentTopic) return;
+      if (client && client.isConnected()) {
+        client.unsubscribe(`fishbrain_group_chat/${currentTopic}`);
+      }
+      currentTopic = newTopic;
+      updateChannelDropdownUI();
+
+      const unlockedRooms = JSON.parse(localStorage.getItem(`unlocked_rooms_${currentActiveUser?.toLowerCase()}`) || '{}');
+      if (currentActiveUser && (currentActiveUser.toLowerCase() === 'kai' || unlockedRooms[currentTopic])) {
+        if (client && client.isConnected()) subscribeToTopic(currentTopic);
+        renderSavedHistory(currentTopic);
+      } else {
+        document.getElementById('auth-overlay').style.display = 'flex';
+        document.getElementById('auth-username').value = currentActiveUser || '';
+        document.getElementById('auth-passcode').value = '';
+        document.getElementById('auth-error').textContent = '';
+      }
+    }
+
+    function openTutorialModal() { document.getElementById('tutorial-modal').style.display = 'flex'; }
     function closeTutorialModal() {
       document.getElementById('tutorial-modal').style.display = 'none';
       localStorage.setItem('has_seen_tutorial', 'true');
     }
 
     function openTripModal() {
-      if (!currentActiveUser) {
-        document.getElementById('auth-overlay').style.display = 'flex';
-        return;
-      }
+      if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
       document.getElementById('trip-modal').style.display = 'flex';
       const today = new Date().toISOString().split('T')[0];
-      if (!document.getElementById('trip-date').value) {
-        document.getElementById('trip-date').value = today;
-      }
+      if (!document.getElementById('trip-date').value) document.getElementById('trip-date').value = today;
     }
-
-    function closeTripModal() {
-      document.getElementById('trip-modal').style.display = 'none';
-    }
+    function closeTripModal() { document.getElementById('trip-modal').style.display = 'none'; }
 
     function openCatchModal() {
-      if (!currentActiveUser) {
-        document.getElementById('auth-overlay').style.display = 'flex';
-        return;
-      }
+      if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
       document.getElementById('catch-modal').style.display = 'flex';
     }
-
     function closeCatchModal() {
       document.getElementById('catch-modal').style.display = 'none';
       document.getElementById('catch-species').value = '';
@@ -1316,115 +1158,46 @@
       currentCatchPhotoData = null;
     }
 
-    function openReminderModal() {
-      if (!currentActiveUser) {
-        document.getElementById('auth-overlay').style.display = 'flex';
-        return;
-      }
-      document.getElementById('reminder-modal').style.display = 'flex';
+    function openCreateChannelModal() {
+      if (!currentActiveUser || currentActiveUser.toLowerCase() !== 'kai') return;
+      document.getElementById('channel-create-modal').style.display = 'flex';
+      document.getElementById('new-channel-name').value = '';
+      document.getElementById('new-channel-pass').value = '';
+    }
+    function closeCreateChannelModal() {
+      document.getElementById('channel-create-modal').style.display = 'none';
     }
 
-    function closeReminderModal() {
-      document.getElementById('reminder-modal').style.display = 'none';
-      document.getElementById('reminder-note').value = '';
-      document.getElementById('reminder-time-input').value = '';
-    }
+    function createChannelSubmit() {
+      const roomName = document.getElementById('new-channel-name').value.trim();
+      const roomPass = document.getElementById('new-channel-pass').value.trim();
 
-    function scheduleGroupReminder() {
-      const note = document.getElementById('reminder-note').value.trim();
-      const minsVal = parseFloat(document.getElementById('reminder-minutes').value);
-      const timeVal = document.getElementById('reminder-time-input').value;
-
-      if (!note) {
-        alert("Please write a reminder note!");
+      if (!roomName || !roomPass) {
+        alert("Please enter both a group chat name and a passcode!");
         return;
       }
 
-      let triggerTimestamp = 0;
-      let displayTimeLabel = '';
+      const slug = roomName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      const formattedTitle = roomName.startsWith('#') ? roomName : '#' + roomName;
 
-      if (timeVal) {
-        const [hours, minutes] = timeVal.split(':').map(Number);
-        const target = new Date();
-        target.setHours(hours, minutes, 0, 0);
-        if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
-        triggerTimestamp = target.getTime();
-        displayTimeLabel = target.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } else if (!isNaN(minsVal) && minsVal > 0) {
-        triggerTimestamp = Date.now() + Math.round(minsVal * 60 * 1000);
-        displayTimeLabel = `in ${minsVal} min (${new Date(triggerTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
-      } else {
-        alert("Please provide valid minutes or an exact time!");
-        return;
-      }
-
-      const reminderId = 'rem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-      const reminderPayload = {
-        type: 'reminder_sync',
-        reminderId: reminderId,
-        note: note,
-        targetTime: triggerTimestamp,
-        timeLabel: displayTimeLabel,
-        creator: currentActiveUser
+      const newRoom = {
+        name: formattedTitle,
+        topic: slug,
+        passcode: roomPass
       };
 
-      sendRawMQTTMessage(reminderPayload);
-      sendCustomMessage(`⏰ [GROUP REMINDER SCHEDULED]\n🔔 Alert: "${note}"\n⏳ Triggers: ${displayTimeLabel}\n👤 Set by: ${currentActiveUser}`, false, false, null, true);
+      channels[slug] = newRoom;
+      localStorage.setItem('app_group_channels', JSON.stringify(channels));
 
-      closeReminderModal();
-      showToast("⏰ Group reminder broadcasted!");
-    }
+      sendRawMQTTMessage({
+        type: 'room_created_sync',
+        room: newRoom
+      });
 
-    function handleIncomingReminder(payload) {
-      const remainingMs = payload.targetTime - Date.now();
-      if (remainingMs <= 0) return;
-
-      if (scheduledReminders.has(payload.reminderId)) {
-        clearTimeout(scheduledReminders.get(payload.reminderId));
-      }
-
-      const timeoutId = setTimeout(() => {
-        triggerGroupAlarm(payload.note, payload.creator);
-        scheduledReminders.delete(payload.reminderId);
-        updateReminderHeaderBar();
-      }, remainingMs);
-
-      scheduledReminders.set(payload.reminderId, timeoutId);
-      updateReminderHeaderBar(payload.note, payload.timeLabel);
-    }
-
-    function updateReminderHeaderBar(note = '', timeLabel = '') {
-      const bar = document.getElementById('reminders-bar');
-      const text = document.getElementById('next-reminder-text');
-      if (note && timeLabel) {
-        text.innerHTML = `⏰ <strong>Next Alert:</strong> "${escapeHtml(note)}" — ${timeLabel}`;
-        bar.style.display = 'flex';
-      } else {
-        bar.style.display = 'none';
-      }
-    }
-
-    function dismissUpcomingReminder() {
-      document.getElementById('reminders-bar').style.display = 'none';
-    }
-
-    function triggerGroupAlarm(note, creator) {
-      document.getElementById('alert-banner-text').textContent = note;
-      document.getElementById('alert-banner-sender').textContent = `Broadcasted by ${creator}`;
-      document.getElementById('alert-banner-modal').style.display = 'flex';
-      playAlarmSiren();
-
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("⏰ Spot Finder Alert!", {
-          body: `${note} (by ${creator})`,
-          icon: "https://fishbrain.com/favicon.ico"
-        });
-      }
-    }
-
-    function dismissTriggeredAlarm() {
-      stopAlarmSiren();
-      document.getElementById('alert-banner-modal').style.display = 'none';
+      closeCreateChannelModal();
+      updateChannelDropdownUI();
+      handleChannelSwitch(slug);
+      showToast(`🎉 Room "${formattedTitle}" created!`);
     }
 
     function handlePhotoUpload(input) {
@@ -1469,10 +1242,7 @@
       const lure = document.getElementById('catch-lure').value.trim();
       const dest = document.querySelector('input[name="catch-dest"]:checked').value;
 
-      if (!species) {
-        alert("Please enter the species!");
-        return;
-      }
+      if (!species) { alert("Please enter the species!"); return; }
 
       const catchData = {
         id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -1498,7 +1268,7 @@
 
       if (dest === 'chat' || dest === 'both') {
         const catchText = `🏆 [CATCH LOGGED]\n🐟 Species: ${species}\n⚖️ Weight: ${weight}\n📍 Spot: ${spot}${lure ? `\n🪱 Lure: ${lure}` : ''}`;
-        sendCustomMessage(catchText, false, true, currentCatchPhotoData, false, catchData);
+        sendCustomMessage(catchText, false, true, currentCatchPhotoData, catchData);
       }
 
       closeCatchModal();
@@ -1553,17 +1323,11 @@
     }
 
     function openLogbookModal() {
-      if (!currentActiveUser) {
-        document.getElementById('auth-overlay').style.display = 'flex';
-        return;
-      }
+      if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
       renderLogbookList();
       document.getElementById('logbook-modal').style.display = 'flex';
     }
-
-    function closeLogbookModal() {
-      document.getElementById('logbook-modal').style.display = 'none';
-    }
+    function closeLogbookModal() { document.getElementById('logbook-modal').style.display = 'none'; }
 
     function broadcastTrip() {
       const spot = document.getElementById('trip-spot').value.trim();
@@ -1573,13 +1337,9 @@
       const cost = document.getElementById('trip-cost').value.trim() || 'Free';
       const notes = document.getElementById('trip-notes').value.trim();
 
-      if (!spot) {
-        alert("Please enter a spot or lake name!");
-        return;
-      }
+      if (!spot) { alert("Please enter a spot or lake name!"); return; }
 
       const tripText = `🎣 [FISHING TRIP PLAN]\n📍 Spot: ${spot}\n📅 Date: ${date} at ${time}\n🎯 Target: ${target}\n💵 Est. Cost: ${cost}${notes ? `\n💡 Tackle: ${notes}` : ''}`;
-
       sendCustomMessage(tripText, true);
       closeTripModal();
       showToast("📢 Trip planned and broadcasted!");
@@ -1603,9 +1363,7 @@
       return `${datePart} • ${timePart}`;
     }
 
-    // ----------------------------------------------------
-    // PASSCODE GATE (GV24)
-    // ----------------------------------------------------
+    // SECURE PASSCODE GATE: Does NOT leak or show the passcode on failure
     function handleAuthSubmit() {
       const nameInput = document.getElementById('auth-username').value.trim();
       const passInput = document.getElementById('auth-passcode').value.trim();
@@ -1617,15 +1375,21 @@
         return;
       }
 
-      // Check passcode requirement
-      if (passInput !== CREW_PASSCODE) {
-        errBox.textContent = 'Incorrect passcode! Enter the crew code (GV24).';
+      const expectedPass = channels[currentTopic]?.passcode || 'GV24';
+
+      if (nameInput.toLowerCase() !== 'kai' && passInput !== expectedPass) {
+        errBox.textContent = 'Incorrect passcode. Access denied.';
         playBeep(220, 'sawtooth', 0.25);
         return;
       }
 
       currentActiveUser = nameInput;
       localStorage.setItem('app_active_session_user', currentActiveUser);
+
+      const unlockedRooms = JSON.parse(localStorage.getItem(`unlocked_rooms_${currentActiveUser.toLowerCase()}`) || '{}');
+      unlockedRooms[currentTopic] = true;
+      localStorage.setItem(`unlocked_rooms_${currentActiveUser.toLowerCase()}`, JSON.stringify(unlockedRooms));
+
       completeLogin();
       showToast("🎣 Welcome to the crew chat!");
       spawnConfetti(['🎣', '🌊', '🐟']);
@@ -1634,7 +1398,16 @@
     function completeLogin() {
       document.getElementById('auth-overlay').style.display = 'none';
       document.getElementById('display-username').textContent = currentActiveUser;
-      document.getElementById('message-text').placeholder = `Text as ${currentActiveUser}...`;
+      document.getElementById('message-text').placeholder = `Text ${channels[currentTopic]?.name || '#chat'}...`;
+
+      const kaiBtn = document.getElementById('kai-add-room-btn');
+      if (currentActiveUser && currentActiveUser.toLowerCase() === 'kai') {
+        kaiBtn.style.display = 'inline-flex';
+      } else {
+        kaiBtn.style.display = 'none';
+      }
+
+      updateChannelDropdownUI();
       renderSavedHistory(currentTopic);
 
       if ("Notification" in window && Notification.permission === "default") {
@@ -1649,6 +1422,7 @@
       document.getElementById('auth-passcode').value = '';
       document.getElementById('auth-error').textContent = '';
       document.getElementById('display-username').textContent = 'Not Signed In';
+      document.getElementById('kai-add-room-btn').style.display = 'none';
       document.getElementById('auth-overlay').style.display = 'flex';
       renderSavedHistory(currentTopic);
     }
@@ -1719,8 +1493,11 @@
           return;
         }
 
-        if (payload.type === 'reminder_sync') {
-          handleIncomingReminder(payload);
+        if (payload.type === 'room_created_sync' && payload.room) {
+          channels[payload.room.topic] = payload.room;
+          localStorage.setItem('app_group_channels', JSON.stringify(channels));
+          updateChannelDropdownUI();
+          showToast(`📢 New room available: ${payload.room.name}`);
           return;
         }
 
@@ -1737,6 +1514,18 @@
 
         appendMessageToUI(payload);
         persistMessageLocally(currentTopic, payload);
+
+        // TRIGGER PHONE CHIME & NOTIFICATION IF TEXT FROM SOMEONE ELSE
+        if (currentActiveUser && payload.sender.toLowerCase() !== currentActiveUser.toLowerCase()) {
+          playIncomingDing();
+
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(`💬 ${payload.sender} (${channels[currentTopic]?.name || 'Chat'})`, {
+              body: payload.text,
+              icon: "https://fishbrain.com/favicon.ico"
+            });
+          }
+        }
       } catch (e) {
         console.error('Failed to parse payload', e);
       }
@@ -1750,12 +1539,8 @@
       client.send(message);
     }
 
-    function sendCustomMessage(text, isTrip = false, isCatch = false, photoData = null, isReminder = false, catchData = null) {
-      if (!currentActiveUser) {
-        document.getElementById('auth-overlay').style.display = 'flex';
-        return;
-      }
-
+    function sendCustomMessage(text, isTrip = false, isCatch = false, photoData = null, catchData = null) {
+      if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
       if (!text || !client || !client.isConnected()) return;
 
       const payload = {
@@ -1764,7 +1549,6 @@
         text: text,
         isTrip: isTrip,
         isCatch: isCatch,
-        isReminder: isReminder,
         photo: photoData,
         catchData: catchData,
         time: getFormattedTimestamp()
@@ -1778,40 +1562,13 @@
       const text = input.value.trim();
       if (!text) return;
 
-      if (text.toLowerCase().startsWith('/remind ')) {
-        const parts = text.split(' ');
-        const mins = parseFloat(parts[1]);
-        const note = parts.slice(2).join(' ');
-
-        if (!isNaN(mins) && mins > 0 && note) {
-          const target = Date.now() + Math.round(mins * 60 * 1000);
-          const timeLabel = `in ${mins} min (${new Date(target).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
-          const reminderPayload = {
-            type: 'reminder_sync',
-            reminderId: 'rem_' + Date.now(),
-            note: note,
-            targetTime: target,
-            timeLabel: timeLabel,
-            creator: currentActiveUser
-          };
-          sendRawMQTTMessage(reminderPayload);
-          sendCustomMessage(`⏰ [GROUP REMINDER SCHEDULED]\n🔔 Alert: "${note}"\n⏳ Triggers: ${timeLabel}\n👤 Set by: ${currentActiveUser}`, false, false, null, true);
-          input.value = '';
-          showToast(`⏰ Scheduled reminder for ${mins} mins!`);
-          return;
-        }
-      }
-
       if (text.toLowerCase() === '/disco') {
         input.value = '';
         let count = 0;
         const discoInt = setInterval(() => {
           document.body.style.filter = `hue-rotate(${count * 45}deg) saturate(200%)`;
           count++;
-          if (count > 16) {
-            clearInterval(discoInt);
-            document.body.style.filter = '';
-          }
+          if (count > 16) { clearInterval(discoInt); document.body.style.filter = ''; }
         }, 120);
         showToast("🕺 <strong>Easter Egg #3:</strong> DISCO RAVE ON THE DOCK!");
         return;
@@ -1867,13 +1624,11 @@
 
       const isTrip = msg.isTrip || msg.text.includes('[FISHING TRIP PLAN]');
       const isCatch = msg.isCatch || msg.text.includes('[CATCH LOGGED]');
-      const isReminder = msg.isReminder || msg.text.includes('[GROUP REMINDER SCHEDULED]');
       const formattedText = escapeHtml(msg.text).replace(/\n/g, '<br/>');
 
       let bubbleClass = 'bubble';
       if (isTrip) bubbleClass += ' trip-announcement';
       if (isCatch) bubbleClass += ' catch-card';
-      if (isReminder) bubbleClass += ' reminder-card';
 
       let photoHtml = '';
       if (msg.photo) {
@@ -1942,7 +1697,7 @@
       }
 
       showToast("🛡️ <strong>Admin Verified:</strong> Welcome, Kai!");
-      const confirmWipe = confirm("Hi Kai, do you want to delete all user chat messages in this channel?");
+      const confirmWipe = confirm(`Hi Kai, do you want to delete all user messages in ${channels[currentTopic]?.name}?`);
       if (confirmWipe) {
         clearChannelHistory(true);
       }
@@ -1952,13 +1707,8 @@
       return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    function openBaroModal() {
-      document.getElementById('baro-modal').style.display = 'flex';
-    }
-
-    function closeBaroModal() {
-      document.getElementById('baro-modal').style.display = 'none';
-    }
+    function openBaroModal() { document.getElementById('baro-modal').style.display = 'flex'; }
+    function closeBaroModal() { document.getElementById('baro-modal').style.display = 'none'; }
 
     document.getElementById('baro-modal').addEventListener('click', (e) => {
       if (e.target.id === 'baro-modal') closeBaroModal();
@@ -2055,10 +1805,6 @@
       setTimeout(() => playBeep(750, 'sawtooth', 0.08), 120);
       setTimeout(() => playBeep(750, 'sawtooth', 0.25), 260);
       showToast("📡 <strong>Easter Egg #14:</strong> <em>BEEP-BEEP-BZZZT!</em> Decoded Coast Guard SOS Signal!");
-    });
-
-    document.getElementById('channel-name-tag').addEventListener('click', () => {
-      showToast("🗺️ <strong>Easter Egg #15:</strong> <em>SECRET LOG CACHE FOUND:</em> 32°58'02.4\"N 117°02'21.1\"W");
     });
 
     document.getElementById('avatar-icon').addEventListener('click', () => {
@@ -2169,7 +1915,6 @@
       document.getElementById('game-modal').style.display = 'flex';
       startSnakeGame();
     }
-
     function closeGame() {
       document.getElementById('game-modal').style.display = 'none';
       clearInterval(gameInterval);
@@ -2177,14 +1922,8 @@
     }
 
     function startSnakeGame() {
-      snake = [
-        { x: 150, y: 150 },
-        { x: 135, y: 150 },
-        { x: 120, y: 150 }
-      ];
-      dx = gridSize;
-      dy = 0;
-      gameScore = 0;
+      snake = [ { x: 150, y: 150 }, { x: 135, y: 150 }, { x: 120, y: 150 } ];
+      dx = gridSize; dy = 0; gameScore = 0;
       document.getElementById('game-score').textContent = gameScore;
       placeFood();
       gameRunning = true;
@@ -2199,7 +1938,6 @@
 
     function updateSnakeGame() {
       if (!gameRunning) return;
-
       const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
       if (head.x < 0) head.x = canvas.width - gridSize;
@@ -2260,7 +1998,6 @@
 
     window.addEventListener('keydown', (e) => {
       if (!gameRunning) return;
-
       const goingUp = dy === -gridSize;
       const goingDown = dy === gridSize;
       const goingRight = dx === gridSize;
@@ -2273,6 +2010,7 @@
     });
 
     window.addEventListener('DOMContentLoaded', () => {
+      updateChannelDropdownUI();
       checkActiveSession();
       initChat();
       fetchWeather('Poway');
