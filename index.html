@@ -191,8 +191,6 @@
       line-height: 1;
     }
 
-    .modal-close-btn:hover { color: #f87171; }
-
     .modal-body p, .modal-body li {
       font-size: 0.82rem;
       line-height: 1.45;
@@ -677,16 +675,16 @@
           <span id="avatar-icon" style="cursor:pointer;">👤</span>
           <span id="display-username">Not Signed In</span>
         </div>
-        <button class="btn-link" onclick="switchAccount()">Switch Account</button>
+        <button class="btn-link" onclick="handleExplicitLogout()">Log Out 🔒</button>
       </div>
 
       <!-- PASSCODE LOCK / SIGN-IN OVERLAY -->
       <div id="auth-overlay">
         <div class="auth-box">
           <h2 id="auth-title-label">Angler Sign In</h2>
-          <p id="auth-room-hint">Enter your handle and this room's passcode.</p>
+          <p id="auth-room-hint">Enter your name and the room passcode.</p>
           <input type="text" id="auth-username" class="auth-input" placeholder="Your Name / Handle" autocomplete="off" />
-          <input type="password" id="auth-passcode" class="auth-input" placeholder="Room Passcode" />
+          <input type="password" id="auth-passcode" class="auth-input" placeholder="Room Passcode" autocomplete="new-password" />
           <button class="auth-btn" onclick="handleAuthSubmit()">Enter Chat 🎣</button>
           <div id="auth-error"></div>
         </div>
@@ -891,8 +889,8 @@
       </div>
       <div class="modal-body">
         <ul>
-          <li><strong>All Rooms Work:</strong> You can create and switch between different chat rooms. Each room requires its own passcode.</li>
-          <li><strong>Mobile Mode:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side!</li>
+          <li><strong>Secure Sessions:</strong> For privacy, accounts auto-lock when closing the tab or after 10 minutes of inactivity. Always remember your room passcode!</li>
+          <li><strong>Mobile vs PC:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side.</li>
           <li><strong>Phone Ding:</strong> When someone sends a text, your device sounds a bright chime and vibrates.</li>
         </ul>
         <p style="text-align: center; margin-top: 8px;">
@@ -944,7 +942,23 @@
     const seenMsgIds = new Set();
     const clientId = 'fish_scout_' + Math.random().toString(16).substring(2, 10);
 
+    // SECURITY ENGINE: Session-only memory for current user & unlocked rooms
     let unlockedRoomsInSession = new Set();
+
+    // Inactivity Auto-Lock Timer (10 Minutes)
+    let autoLockTimeout = null;
+    function resetAutoLockTimer() {
+      clearTimeout(autoLockTimeout);
+      if (currentActiveUser) {
+        autoLockTimeout = setTimeout(() => {
+          handleExplicitLogout("Session timed out due to inactivity. Please sign in again.");
+        }, 10 * 60 * 1000);
+      }
+    }
+
+    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+      window.addEventListener(evt, resetAutoLockTimer, { passive: true });
+    });
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBeep(freq = 440, type = 'sine', duration = 0.15) {
@@ -1064,6 +1078,7 @@
       renderSavedHistory(currentTopic);
     }
 
+    // STRICT PASSCODE LOGIN (Uses sessionStorage so other people can't auto-log in)
     function handleAuthSubmit() {
       const nameInput = document.getElementById('auth-username').value.trim();
       const passInput = document.getElementById('auth-passcode').value.trim();
@@ -1077,9 +1092,9 @@
 
       const targetRoomTopic = pendingSwitchTopic || currentTopic;
       const expectedPass = channels[targetRoomTopic]?.passcode || 'GV24';
-      const isMasterKai = nameInput.toLowerCase() === 'kai';
-
-      if (!isMasterKai && passInput !== expectedPass) {
+      
+      // Passcode is verified for all room entries
+      if (passInput !== expectedPass) {
         errBox.textContent = 'Incorrect passcode. Access denied.';
         playBeep(220, 'sawtooth', 0.25);
         document.getElementById('auth-passcode').value = '';
@@ -1087,7 +1102,8 @@
       }
 
       currentActiveUser = nameInput;
-      localStorage.setItem('app_active_session_user', currentActiveUser);
+      // STORE IN SESSION ONLY: Disappears when browser or tab closes
+      sessionStorage.setItem('spot_finder_active_user', currentActiveUser);
       unlockedRoomsInSession.add(targetRoomTopic);
 
       if (pendingSwitchTopic) {
@@ -1095,7 +1111,8 @@
       }
 
       completeLogin();
-      showToast("🎣 Room unlocked!");
+      resetAutoLockTimer();
+      showToast("🎣 Session authenticated!");
     }
 
     function completeLogin() {
@@ -1118,28 +1135,32 @@
       }
     }
 
-    function switchAccount() {
+    function handleExplicitLogout(noticeMsg = '') {
       currentActiveUser = null;
       unlockedRoomsInSession.clear();
-      localStorage.removeItem('app_active_session_user');
+      sessionStorage.removeItem('spot_finder_active_user');
+      clearTimeout(autoLockTimeout);
+
       document.getElementById('auth-username').value = '';
       document.getElementById('auth-passcode').value = '';
-      document.getElementById('auth-error').textContent = '';
+      document.getElementById('auth-error').textContent = noticeMsg;
       document.getElementById('display-username').textContent = 'Not Signed In';
       document.getElementById('kai-add-room-btn').style.display = 'none';
       document.getElementById('auth-title-label').textContent = 'Angler Sign In';
       document.getElementById('auth-overlay').style.display = 'flex';
       renderSavedHistory(currentTopic);
+      if (noticeMsg) showToast("🔒 Locked");
     }
 
+    // CHECK SESSION: Ensures no lingering credentials exist when another person loads the page
     function checkActiveSession() {
-      const savedSession = localStorage.getItem('app_active_session_user');
-      if (savedSession) {
-        currentActiveUser = savedSession;
+      const activeSession = sessionStorage.getItem('spot_finder_active_user');
+      if (activeSession) {
+        currentActiveUser = activeSession;
         unlockedRoomsInSession.add(currentTopic);
         completeLogin();
       } else {
-        document.getElementById('auth-overlay').style.display = 'flex';
+        handleExplicitLogout();
       }
 
       const seenTutorial = localStorage.getItem('has_seen_tutorial');
@@ -1314,7 +1335,7 @@
       if (activeLogbookView === 'crew') {
         catches = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
       } else {
-        const userKey = `user_catches_${currentActiveUser.toLowerCase()}`;
+        const userKey = `user_catches_${currentActiveUser ? currentActiveUser.toLowerCase() : 'guest'}`;
         catches = JSON.parse(localStorage.getItem(userKey) || '[]');
       }
 
@@ -1404,8 +1425,6 @@
     function onConnectSuccess() {
       document.getElementById('conn-dot').className = 'status-dot online';
       document.getElementById('conn-text').textContent = 'Live Sync';
-      
-      // CRITICAL FIX: Subscribe using MQTT wildcard '+' to catch messages on ALL rooms
       client.subscribe('fishbrain_group_chat/+', { qos: 1 });
     }
 
@@ -1433,7 +1452,6 @@
           return;
         }
 
-        // Room creation broadcast
         if (payload.type === 'room_created_sync' && payload.room) {
           if (!channels[payload.room.topic]) {
             channels[payload.room.topic] = payload.room;
@@ -1444,14 +1462,12 @@
           return;
         }
 
-        // Automatically learn custom rooms if we receive messages on them
         if (payload.roomMeta && !channels[payload.roomMeta.topic]) {
           channels[payload.roomMeta.topic] = payload.roomMeta;
           localStorage.setItem('app_group_channels', JSON.stringify(channels));
           updateChannelDropdownUI();
         }
 
-        // Catch Log archive sync
         if (payload.catchData) {
           const allCrew = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
           if (!allCrew.some(c => c.id === payload.catchData.id)) {
@@ -1463,16 +1479,13 @@
         if (payload.id && seenMsgIds.has(payload.id)) return;
         seenMsgIds.add(payload.id);
 
-        // Always save message under its actual room channel
         const messageChannel = payload.channel || destinationTopic || currentTopic;
         persistMessageLocally(messageChannel, payload);
 
-        // If the message is for the currently viewed room, add to UI
         if (messageChannel === currentTopic) {
           appendMessageToUI(payload);
         }
 
-        // Chime device if message is from another user
         if (currentActiveUser && payload.sender.toLowerCase() !== currentActiveUser.toLowerCase()) {
           playIncomingDing();
 
