@@ -1,36 +1,1891 @@
-// 1. Apple iMessage Opener
-function sendViaAppleMessages() {
-  const { text } = getDraftMessage();
-  const payload = `${text}\n\nSent from Spot Finder: ${window.location.href}`;
-  const isAppleDevice = /iPad|iPhone|iPod|Macintosh/i.test(navigator.userAgent);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Spot Finder & Live Crew Chat</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-  if (isAppleDevice) {
-    // Works on iPhone, iPad, and Mac computers
-    window.location.href = `sms:&body=${encodeURIComponent(payload)}`;
-    showToast("💬 Opening Apple Messages...");
-  } else {
-    // Windows PC Fallback
-    copyToClipboardFallback(payload);
-    alert("Apple does not allow iMessage on Windows PCs.\n\nYour message was copied to your clipboard! Use the blue (↑) button to chat inside Spot Finder, or paste it into your paired Phone Link app.");
-  }
-}
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      background: #0f172a;
+      color: #f8fafc;
+      overflow: hidden;
+    }
 
-// 2. Android SMS Opener (Works on both Phone & PC)
-function sendViaAndroidSMS() {
-  const { text } = getDraftMessage();
-  const payload = `${text}\n\nSent from Spot Finder: ${window.location.href}`;
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    header {
+      background: #1e293b;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #334155;
+      z-index: 20;
+      gap: 8px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
 
-  if (isMobile) {
-    // Native phone SMS
-    window.location.href = `sms:?body=${encodeURIComponent(payload)}`;
-    showToast("🤖 Opening phone texting app...");
-  } else {
-    // PC: Copy text and open Google Messages for Web
-    copyToClipboardFallback(payload);
-    showToast("📋 Message copied! Opening Google Messages Web...");
-    setTimeout(() => {
-      window.open('https://messages.google.com/web', '_blank');
-    }, 600);
-  }
-}
+    header::-webkit-scrollbar { height: 3px; }
+    header::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .brand h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #38bdf8;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 999px;
+      user-select: none;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .input-dark {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 5px 8px;
+      color: #f8fafc;
+      font-size: 0.78rem;
+      outline: none;
+    }
+
+    .input-dark:focus { border-color: #38bdf8; }
+
+    .btn {
+      background: #007aff;
+      color: #fff;
+      border: none;
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn:hover { background: #0062cc; }
+
+    #weather-display {
+      font-size: 0.76rem;
+      background: #0f172a;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      color: #cbd5e1;
+      flex-shrink: 0;
+    }
+
+    .pressure-container {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .info-bubble-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #38bdf8;
+      color: #0f172a;
+      font-size: 0.62rem;
+      font-weight: 800;
+      cursor: pointer;
+      line-height: 1;
+      position: relative;
+      top: -5px;
+      margin-left: -2px;
+      border: none;
+    }
+
+    /* Modals */
+    #baro-modal, #tutorial-modal, #trip-modal, #catch-modal, #logbook-modal, #channel-create-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      background: #182232;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      max-width: 560px;
+      width: 100%;
+      padding: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 8px;
+    }
+
+    .modal-header h3 { font-size: 1.05rem; color: #38bdf8; }
+
+    .modal-close-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.2rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .modal-close-btn:hover { color: #f87171; }
+
+    .modal-body p, .modal-body li {
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+
+    .modal-body ul { padding-left: 18px; margin-bottom: 10px; }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .form-group label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    .destination-radio-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .destination-radio-label {
+      border: 1px solid #334155;
+      background: #0f172a;
+      padding: 6px;
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.72rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .destination-radio-label:has(input:checked) {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    .preview-box {
+      width: 100%;
+      max-height: 140px;
+      border-radius: 8px;
+      border: 1px dashed #475569;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-top: 4px;
+      background: #090d16;
+    }
+
+    .preview-box img { max-width: 100%; max-height: 140px; object-fit: cover; }
+
+    .logbook-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+    .logbook-tab-btn {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .logbook-tab-btn.active { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
+
+    .logbook-grid { display: flex; flex-direction: column; gap: 8px; }
+    .logbook-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      gap: 10px;
+    }
+    .logbook-card img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+    .logbook-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 0.75rem;
+    }
+    .logbook-details strong { color: #38bdf8; font-size: 0.88rem; }
+    .logbook-empty { text-align: center; padding: 24px 10px; color: #64748b; font-size: 0.8rem; }
+
+    .guide-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; margin-bottom: 8px; }
+    .guide-table th, .guide-table td { border: 1px solid #334155; padding: 5px 7px; text-align: left; }
+    .guide-table th { background: #1e293b; color: #38bdf8; }
+
+    #main-wrapper {
+      display: flex;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #chat-sidebar {
+      width: 350px;
+      background: #000000;
+      border-right: 1px solid #27272a;
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+      position: relative;
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #chat-sidebar.collapsed { width: 0 !important; border-right: none; }
+    #chat-sidebar.collapsed > * { display: none !important; }
+
+    #collapse-tab {
+      position: absolute;
+      top: 12px;
+      left: 350px;
+      z-index: 25;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-left: none;
+      color: #38bdf8;
+      width: 24px;
+      height: 44px;
+      border-radius: 0 8px 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+      transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #collapse-tab:hover { background: #334155; color: #7dd3fc; }
+    #collapse-tab.collapsed-pos { left: 0 !important; }
+
+    .chat-header {
+      padding: 8px 10px;
+      background: #18181b;
+      border-bottom: 1px solid #27272a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      gap: 6px;
+    }
+
+    .channel-picker {
+      background: #09090b;
+      border: 1px solid #3f3f46;
+      color: #38bdf8;
+      font-size: 0.74rem;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 3px 6px;
+      outline: none;
+      cursor: pointer;
+      max-width: 165px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #eab308;
+      margin-right: 5px;
+    }
+    .status-dot.online { background: #34c759; }
+    .status-dot.offline { background: #ff3b30; }
+
+    .user-account-bar {
+      padding: 6px 10px;
+      background: #121214;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #27272a;
+      font-size: 0.74rem;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.7rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    #auth-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.98);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .auth-box {
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #18181b;
+      padding: 18px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    }
+
+    .auth-box h2 { font-size: 1rem; color: #f8fafc; text-align: center; }
+    .auth-box p { font-size: 0.72rem; color: #94a3b8; text-align: center; }
+
+    .auth-input {
+      background: #09090b;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #f8fafc;
+      font-size: 0.82rem;
+      outline: none;
+    }
+
+    .auth-input:focus { border-color: #38bdf8; }
+
+    .auth-btn {
+      background: #007aff;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #auth-error {
+      font-size: 0.72rem;
+      color: #f87171;
+      text-align: center;
+      min-height: 14px;
+      font-weight: 600;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #000000;
+    }
+
+    .message-group {
+      display: flex;
+      flex-direction: column;
+      max-width: 86%;
+    }
+
+    .message-group.theirs { align-self: flex-start; align-items: flex-start; }
+    .message-group.theirs .bubble {
+      background-color: #26252a;
+      color: #ffffff;
+      border-radius: 16px 16px 16px 4px;
+    }
+    .message-group.theirs .msg-sender { color: #a1a1aa; margin-left: 6px; }
+
+    .message-group.mine { align-self: flex-end; align-items: flex-end; }
+    .message-group.mine .bubble {
+      background-color: #007aff;
+      color: #ffffff;
+      border-radius: 16px 16px 4px 16px;
+    }
+    .message-group.mine .msg-sender { color: #93c5fd; margin-right: 6px; }
+
+    .msg-sender { font-size: 0.65rem; font-weight: 600; margin-bottom: 2px; }
+    .bubble {
+      padding: 7px 11px;
+      font-size: 0.84rem;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .bubble.trip-announcement {
+      background: linear-gradient(135deg, #0369a1, #0284c7) !important;
+      border: 1px solid #38bdf8;
+    }
+
+    .bubble.catch-card {
+      background: linear-gradient(135deg, #1e3a5f, #0d5f8a) !important;
+      border: 1px solid #38bdf8;
+      padding: 8px 10px;
+    }
+
+    .catch-photo {
+      width: 100%;
+      border-radius: 6px;
+      margin-top: 6px;
+      display: block;
+    }
+
+    .msg-actions {
+      display: flex;
+      gap: 4px;
+      margin-top: 3px;
+      opacity: 0.7;
+    }
+    .msg-actions:hover { opacity: 1; }
+    .action-chip {
+      background: #18181b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      font-size: 0.62rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .action-chip:hover { color: #38bdf8; border-color: #38bdf8; }
+
+    .msg-time { font-size: 0.6rem; color: #71717a; margin-top: 2px; }
+    .message-group.mine .msg-time { margin-right: 4px; }
+    .message-group.theirs .msg-time { margin-left: 4px; }
+
+    /* Compose Container */
+    .chat-compose-container {
+      padding: 8px 10px;
+      background: #121214;
+      border-top: 1px solid #27272a;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .compose-input-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .sms-input {
+      flex: 1;
+      background: #1c1c1e;
+      border: 1px solid #3a3a3c;
+      border-radius: 20px;
+      padding: 8px 14px;
+      color: #f4f4f5;
+      font-size: 0.84rem;
+      outline: none;
+    }
+    .sms-input:focus { border-color: #007aff; }
+
+    .send-main-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #007aff;
+      color: #fff;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .external-text-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+    }
+
+    .text-channel-tag {
+      font-size: 0.65rem;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .text-buttons-row {
+      display: flex;
+      gap: 5px;
+    }
+
+    .imessage-btn {
+      background: #007aff;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .imessage-btn:hover { background: #0062cc; }
+
+    .android-btn {
+      background: #22c55e;
+      color: #052e16;
+      border: none;
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .android-btn:hover { background: #16a34a; color: #fff; }
+
+    #map-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      background: #0b1120;
+    }
+
+    iframe { width: 100%; height: 100%; border: none; }
+
+    #mobile-nav-bar {
+      display: none;
+      background: #18181b;
+      border-top: 1px solid #27272a;
+      height: 48px;
+      flex-shrink: 0;
+      z-index: 25;
+    }
+
+    .mobile-tab-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.7rem;
+      font-weight: 600;
+      gap: 2px;
+      cursor: pointer;
+    }
+
+    .mobile-tab-btn.active { color: #38bdf8; }
+
+    @media (max-width: 768px) {
+      #collapse-tab { display: none !important; }
+      #mobile-nav-bar { display: flex; }
+      #main-wrapper { position: relative; }
+      #chat-sidebar {
+        position: absolute;
+        inset: 0;
+        width: 100% !important;
+        display: none;
+      }
+      #map-container {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        display: block;
+      }
+      body.mobile-view-chat #chat-sidebar { display: flex !important; }
+      body.mobile-view-chat #map-container { display: none !important; }
+      body.mobile-view-map #chat-sidebar { display: none !important; }
+      body.mobile-view-map #map-container { display: block !important; }
+    }
+
+    #egg-toast {
+      position: fixed;
+      bottom: 56px;
+      right: 16px;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border: 2px solid #7dd3fc;
+      color: #ffffff;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      z-index: 300;
+      display: none;
+    }
+  </style>
+</head>
+<body class="mobile-view-map">
+
+  <header>
+    <div class="brand">
+      <h1 id="app-title-btn">🎣 Spot Finder</h1>
+      <span class="badge" id="secret-admin-trigger">Crew Edition</span>
+    </div>
+
+    <div class="header-actions">
+      <button id="kai-add-room-btn" class="btn" style="background:#7c3aed; display:none;" onclick="openCreateChannelModal()">➕ New Chat</button>
+      <button class="btn" style="background:#0284c7;" onclick="openCatchModal()">🐟 Log Catch</button>
+      <button class="btn" style="background:#0ea5e9;" onclick="openLogbookModal()">📖 All Catches</button>
+      <button class="btn" style="background:#059669;" onclick="openTripModal()">📍 Plan Trip</button>
+      <button class="btn" style="background:#334155; padding: 5px 8px;" onclick="openTutorialModal()" title="Help & Guide">❓ Help</button>
+      
+      <div style="display:flex; align-items:center; gap:5px; margin-left:4px;">
+        <input type="text" id="location-input" class="input-dark" style="width: 95px;" placeholder="Location..." value="Poway" />
+        <button class="btn" onclick="fetchWeatherUserTrigger()">Weather</button>
+      </div>
+
+      <div id="weather-display">
+        <span id="weather-stats">Loading weather...</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="main-wrapper">
+    <div id="collapse-tab" onclick="toggleChatSidebar()" title="Collapse/Expand Chat">
+      <span id="collapse-icon">◀</span>
+    </div>
+
+    <aside id="chat-sidebar">
+      <div class="chat-header">
+        <span style="display:flex; align-items:center;">
+          <span id="conn-dot" class="status-dot online"></span>
+          <span id="conn-text" style="color:#d4d4d8;">Live Sync</span>
+        </span>
+        
+        <select id="channel-dropdown" class="channel-picker" onchange="attemptChannelSwitch(this.value)"></select>
+      </div>
+
+      <div class="user-account-bar">
+        <div class="user-pill">
+          <span id="avatar-icon" style="cursor:pointer;">👤</span>
+          <span id="display-username">Not Signed In</span>
+        </div>
+        <button class="btn-link" onclick="handleExplicitLogout()">Log Out 🔒</button>
+      </div>
+
+      <!-- AUTH OVERLAY -->
+      <div id="auth-overlay">
+        <div class="auth-box">
+          <h2 id="auth-title-label">Angler Sign In</h2>
+          <p id="auth-room-hint">Enter your name, account password, and room code.</p>
+          <input type="text" id="auth-username" class="auth-input" placeholder="Your Name / Handle" autocomplete="off" />
+          <input type="password" id="auth-userpass" class="auth-input" placeholder="Account Password" autocomplete="new-password" />
+          <input type="password" id="auth-roompass" class="auth-input" placeholder="Room Passcode" autocomplete="new-password" />
+          <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Unlock Room 🎣</button>
+          <div id="auth-error"></div>
+        </div>
+      </div>
+
+      <div id="messages-box" class="chat-messages"></div>
+
+      <!-- COMPOSE BAR WITH iMESSAGE & ANDROID BUTTONS -->
+      <div class="chat-compose-container">
+        <div class="compose-input-row">
+          <input type="text" id="message-text" class="sms-input" placeholder="Text message..." />
+          <button class="send-main-btn" onclick="sendMessage()" title="Send to in-app Crew Chat">↑</button>
+        </div>
+
+        <div class="external-text-toolbar">
+          <span class="text-channel-tag">Also text via phone:</span>
+          <div class="text-buttons-row">
+            <button class="imessage-btn" onclick="sendViaAppleMessages()" title="Send through Apple iMessage">
+              💬 iMessage
+            </button>
+            <button class="android-btn" onclick="sendViaAndroidSMS()" title="Send through Android Messages">
+              🤖 Android SMS
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main id="map-container">
+      <iframe 
+        id="map-frame"
+        src="https://take-me-fishing.fishbrain.com/en-embedded/" 
+        allow="geolocation; camera; microphone"
+        title="Interactive Fishing Map">
+      </iframe>
+    </main>
+  </div>
+
+  <nav id="mobile-nav-bar">
+    <button id="mob-map-tab" class="mobile-tab-btn active" onclick="setMobileTab('map')">
+      <span style="font-size:1.1rem;">🗺️</span>
+      <span>Scout Map</span>
+    </button>
+    <button id="mob-chat-tab" class="mobile-tab-btn" onclick="setMobileTab('chat')">
+      <span style="font-size:1.1rem;">💬</span>
+      <span id="mob-chat-label">Crew Chat</span>
+    </button>
+  </nav>
+
+  <!-- KAI NEW ROOM CREATOR -->
+  <div id="channel-create-modal">
+    <div class="modal-content" style="border: 2px solid #7c3aed;">
+      <div class="modal-header">
+        <h3 style="color:#c4b5fd;">➕ Create New Group Chat</h3>
+        <button class="modal-close-btn" onclick="closeCreateChannelModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Create private rooms with custom passcodes for different crews.</p>
+        
+        <div class="form-group">
+          <label>Group Chat Name</label>
+          <input type="text" id="new-channel-name" class="input-dark" placeholder="e.g. Saltwater Crew, Lake Hodges" />
+        </div>
+
+        <div class="form-group">
+          <label>Set Room Passcode</label>
+          <input type="text" id="new-channel-pass" class="input-dark" placeholder="Secret Passcode" />
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn" style="flex:1; background:#7c3aed;" onclick="createChannelSubmit()">Create &amp; Publish Room 🚀</button>
+          <button class="btn" style="background:#334155;" onclick="closeCreateChannelModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATCH LOGBOOK -->
+  <div id="logbook-modal">
+    <div class="modal-content" style="border: 2px solid #0ea5e9;">
+      <div class="modal-header">
+        <h3 id="logbook-owner-title">📖 Caught Fish Archive</h3>
+        <button class="modal-close-btn" onclick="closeLogbookModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="logbook-tabs">
+          <button id="tab-crew" class="logbook-tab-btn active" onclick="switchLogbookView('crew')">👥 All Crew Catches</button>
+          <button id="tab-personal" class="logbook-tab-btn" onclick="switchLogbookView('personal')">👤 My Personal Logbook</button>
+        </div>
+        <div id="logbook-container" class="logbook-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG A CATCH -->
+  <div id="catch-modal">
+    <div class="modal-content" style="border: 2px solid #38bdf8;">
+      <div class="modal-header">
+        <h3>🐟 Log Your Catch</h3>
+        <button class="modal-close-btn" onclick="closeCatchModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Save fish to your personal logbook, broadcast to the crew, or both!</p>
+
+        <div style="display:flex; gap:8px;">
+          <div class="form-group" style="flex:1;">
+            <label>Species</label>
+            <input type="text" id="catch-species" class="input-dark" placeholder="e.g. Largemouth Bass" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Weight / Length</label>
+            <input type="text" id="catch-weight" class="input-dark" placeholder="e.g. 4 lbs 2 oz" />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <div class="form-group" style="flex:1;">
+            <label>Location / Body of Water</label>
+            <input type="text" id="catch-spot" class="input-dark" placeholder="e.g. Lake Poway" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Lure / Bait Used</label>
+            <input type="text" id="catch-lure" class="input-dark" placeholder="e.g. Texas Rig Senko" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Catch Photo</label>
+          <input type="file" id="catch-photo-input" class="input-dark" accept="image/*" onchange="handlePhotoUpload(this)" />
+          <div class="preview-box" id="catch-preview-container">
+            <img id="catch-preview-img" src="" alt="Catch Preview" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Where should this catch go?</label>
+          <div class="destination-radio-group">
+            <label class="destination-radio-label">
+              <input type="radio" name="catch-dest" value="logbook" />
+              <span>Logbook</span>
+            </label>
+            <label class="destination-radio-label">
+              <input type="radio" name="catch-dest" value="chat" />
+              <span>Group Chat</span>
+            </label>
+            <label class="destination-radio-label">
+              <input type="radio" name="catch-dest" value="both" checked />
+              <span>Both</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn" style="flex:1; background:#0284c7;" onclick="saveCatch()">Save &amp; Log 🎣</button>
+          <button class="btn" style="background:#334155;" onclick="closeCatchModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAN A TRIP -->
+  <div id="trip-modal">
+    <div class="modal-content" style="border: 2px solid #059669;">
+      <div class="modal-header">
+        <h3 style="color:#34d399;">📍 Plan a Fishing Trip</h3>
+        <button class="modal-close-btn" onclick="closeTripModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Coordinate a meetup and broadcast to the chat or send directly via SMS/iMessage.</p>
+
+        <div class="form-group">
+          <label>Spot / Body of Water</label>
+          <input type="text" id="trip-spot" class="input-dark" placeholder="e.g. Lake Poway, Lake Hodges" />
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <div class="form-group" style="flex:1;">
+            <label>Date</label>
+            <input type="date" id="trip-date" class="input-dark" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Meetup Time</label>
+            <input type="time" id="trip-time" class="input-dark" value="06:30" />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <div class="form-group" style="flex:1;">
+            <label>Target Species</label>
+            <input type="text" id="trip-target" class="input-dark" placeholder="e.g. Largemouth Bass" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>💵 Estimated Cost / Fee ($$)</label>
+            <input type="text" id="trip-cost" class="input-dark" placeholder="e.g. Free, $7 parking" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Suggested Baits / Notes</label>
+          <input type="text" id="trip-notes" class="input-dark" placeholder="e.g. Texas rig soft plastics" />
+        </div>
+
+        <div style="display:flex; gap:6px; margin-top:10px;">
+          <button class="btn" style="flex:1; background:#059669;" onclick="broadcastTrip()">Broadcast to Chat 📢</button>
+          <button class="btn" style="background:#2563eb;" onclick="shareTripViaSMS()" title="Text via iMessage/SMS">💬 Text Contacts</button>
+          <button class="btn" style="background:#334155;" onclick="closeTripModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TUTORIAL -->
+  <div id="tutorial-modal">
+    <div class="modal-content" style="border: 2px solid #38bdf8;">
+      <div class="modal-header">
+        <h3>🎣 Welcome to Spot Finder!</h3>
+        <button class="modal-close-btn" onclick="closeTutorialModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <ul>
+          <li><strong>Text &amp; iMessage Share:</strong> Use the 💬 <em>iMessage</em> and 🤖 <em>Android SMS</em> buttons to text your crew from mobile or open Google/iCloud messages on PC!</li>
+          <li><strong>Zero Saved Logins:</strong> Credentials are never stored on disk. When you close the app or browser, the session locks immediately.</li>
+          <li><strong>Mobile Mode:</strong> On phones, tap the bottom tabs to toggle between the map and the chat. On computers, they sit side by side!</li>
+        </ul>
+        <p style="text-align: center; margin-top: 8px;">
+          <button class="btn" style="padding: 8px 20px; font-size: 0.9rem;" onclick="closeTutorialModal()">Let's Fish! 🎣</button>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="baro-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title-text" style="cursor:pointer;">⏱️ Barometric Pressure Fishing Guide</h3>
+        <button class="modal-close-btn" onclick="closeBaroModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <table class="guide-table">
+          <thead>
+            <tr><th>Pressure Level</th><th>Barometer</th><th>Fish Behavior</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Falling (Best Bite)</strong></td><td>29.90 – 30.10 ↓</td><td>High activity ahead of fronts. Moving lures.</td></tr>
+            <tr><td><strong>High / Rising</strong></td><td>Over 30.20 ↑</td><td>Moderate to slow. Fish tight to cover.</td></tr>
+            <tr><td><strong>Low Pressure</strong></td><td>Under 29.80</td><td>Tough bite. Dead-stick plastics on bottom.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="egg-toast"></div>
+
+  <script>
+    const DEFAULT_ROOMS = {
+      'green-valley-ward-fishing': {
+        name: '#green-valley-ward-fishing',
+        topic: 'green-valley-ward-fishing',
+        passcode: 'GV24'
+      }
+    };
+
+    let channels = JSON.parse(localStorage.getItem('app_group_channels') || JSON.stringify(DEFAULT_ROOMS));
+    let currentTopic = 'green-valley-ward-fishing';
+    let pendingSwitchTopic = null;
+    let client = null;
+    let currentCatchPhotoData = null;
+    let activeLogbookView = 'crew';
+    const seenMsgIds = new Set();
+    const clientId = 'fish_scout_' + Math.random().toString(16).substring(2, 10);
+
+    // RAM-ONLY CREDENTIALS (WIPED UPON PAGE CLOSE OR REFRESH)
+    let currentActiveUser = null;
+    let unlockedRoomsInRAM = new Set();
+    let authLockoutUntil = 0;
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 440, type = 'sine', duration = 0.15) {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playIncomingDing() {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1318.51, now);
+        gain1.gain.setValueAtTime(0.25, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.12);
+
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1975.53, now + 0.08);
+        gain2.gain.setValueAtTime(0.3, now + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.08);
+        osc2.stop(now + 0.35);
+
+        if ("vibrate" in navigator) {
+          navigator.vibrate([120, 60, 120]);
+        }
+      } catch (e) {}
+    }
+
+    // ==========================================
+    // CROSS-PLATFORM (PC & PHONE) TEXTING HANDLERS
+    // ==========================================
+    function getDraftMessage() {
+      const input = document.getElementById('message-text');
+      const text = input.value.trim();
+      return { input, text: text || 'Hey crew, check out Spot Finder!' };
+    }
+
+    function copyToClipboardFallback(payloadText) {
+      navigator.clipboard.writeText(payloadText).then(() => {
+        showToast("📋 Copied to clipboard!");
+      }).catch(() => {
+        alert("Text:\n\n" + payloadText);
+      });
+    }
+
+    function sendViaAppleMessages() {
+      const { text } = getDraftMessage();
+      const payload = `${text}\n\nSent from Spot Finder: ${window.location.href}`;
+      const isApple = /iPad|iPhone|iPod|Macintosh/i.test(navigator.userAgent);
+
+      if (isApple) {
+        window.location.href = `sms:&body=${encodeURIComponent(payload)}`;
+        showToast("💬 Opening Apple Messages...");
+      } else {
+        copyToClipboardFallback(payload);
+        showToast("📋 Copied! Opening iCloud Web...");
+        setTimeout(() => {
+          window.open('https://www.icloud.com/messages', '_blank');
+        }, 600);
+      }
+    }
+
+    function sendViaAndroidSMS() {
+      const { text } = getDraftMessage();
+      const payload = `${text}\n\nSent from Spot Finder: ${window.location.href}`;
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        window.location.href = `sms:?body=${encodeURIComponent(payload)}`;
+        showToast("🤖 Opening phone texting app...");
+      } else {
+        copyToClipboardFallback(payload);
+        showToast("📋 Copied! Opening Google Messages Web...");
+        setTimeout(() => {
+          window.open('https://messages.google.com/web', '_blank');
+        }, 600);
+      }
+    }
+
+    function shareMessageText(rawText) {
+      const payload = `${rawText}\n\nSent from Spot Finder: ${window.location.href}`;
+      if (navigator.share) {
+        navigator.share({ title: 'Spot Finder Chat', text: payload }).catch(() => {});
+      } else {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = `sms:${isIOS ? '&' : '?'}body=${encodeURIComponent(payload)}`;
+        } else {
+          copyToClipboardFallback(payload);
+        }
+      }
+    }
+
+    function shareTripViaSMS() {
+      const spot = document.getElementById('trip-spot').value.trim() || 'Fishing Spot';
+      const date = document.getElementById('trip-date').value;
+      const time = document.getElementById('trip-time').value;
+      const target = document.getElementById('trip-target').value.trim() || 'Fish';
+      const cost = document.getElementById('trip-cost').value.trim() || 'Free';
+
+      const message = `🎣 Fishing Meetup at ${spot}!\n📅 ${date} at ${time}\n🎯 Target: ${target}\n💵 Cost: ${cost}`;
+      shareMessageText(message);
+    }
+
+    function shareCatchViaSMS(species, weight, spot) {
+      const message = `Check out this catch landed on Spot Finder:\n🐟 ${species} (${weight})\n📍 Caught at: ${spot}`;
+      shareMessageText(message);
+    }
+
+    const permanentIntroMessages = [
+      { id: "intro_1", sender: "kai", text: "hi", time: "Sun, Sep 13 • 04:05 PM" },
+      { id: "intro_2", sender: "kai", text: "this is my app", time: "Sun, Sep 13 • 04:05 PM" },
+      { id: "intro_3", sender: "kai", text: "you can find fishing spots around the world and see what people have caught there", time: "Sun, Sep 13 • 04:06 PM" },
+      { id: "intro_4", sender: "kai", text: "and check the weather", time: "Sun, Sep 13 • 04:06 PM" }
+    ];
+
+    function showToast(msg) {
+      playBeep(587.33, 'triangle', 0.2);
+      const toast = document.getElementById('egg-toast');
+      toast.innerHTML = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    function setMobileTab(tab) {
+      document.body.classList.remove('mobile-view-map', 'mobile-view-chat');
+      document.getElementById('mob-map-tab').classList.remove('active');
+      document.getElementById('mob-chat-tab').classList.remove('active');
+
+      if (tab === 'map') {
+        document.body.classList.add('mobile-view-map');
+        document.getElementById('mob-map-tab').classList.add('active');
+      } else {
+        document.body.classList.add('mobile-view-chat');
+        document.getElementById('mob-chat-tab').classList.add('active');
+      }
+    }
+
+    function updateChannelDropdownUI() {
+      const dropdown = document.getElementById('channel-dropdown');
+      dropdown.innerHTML = '';
+      Object.keys(channels).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = channels[key].name;
+        if (key === currentTopic) opt.selected = true;
+        dropdown.appendChild(opt);
+      });
+      document.getElementById('message-text').placeholder = `Text ${channels[currentTopic]?.name || 'crew'}...`;
+    }
+
+    function attemptChannelSwitch(targetTopic) {
+      if (targetTopic === currentTopic) return;
+
+      const isKai = currentActiveUser && currentActiveUser.toLowerCase() === 'kai';
+      const isAlreadyUnlocked = unlockedRoomsInRAM.has(targetTopic);
+
+      if (isKai || isAlreadyUnlocked) {
+        finishChannelSwitch(targetTopic);
+      } else {
+        pendingSwitchTopic = targetTopic;
+        document.getElementById('auth-overlay').style.display = 'flex';
+        document.getElementById('auth-title-label').textContent = `Unlock ${channels[targetTopic]?.name || 'Chat'}`;
+        document.getElementById('auth-room-hint').textContent = `Enter account password and room passcode.`;
+        document.getElementById('auth-username').value = currentActiveUser || '';
+        document.getElementById('auth-userpass').value = '';
+        document.getElementById('auth-roompass').value = '';
+        document.getElementById('auth-error').textContent = '';
+      }
+    }
+
+    function finishChannelSwitch(newTopic) {
+      currentTopic = newTopic;
+      pendingSwitchTopic = null;
+      updateChannelDropdownUI();
+      renderSavedHistory(currentTopic);
+    }
+
+    function handleAuthSubmit() {
+      if (Date.now() < authLockoutUntil) {
+        const waitSecs = Math.ceil((authLockoutUntil - Date.now()) / 1000);
+        document.getElementById('auth-error').textContent = `Too many attempts. Locked for ${waitSecs}s.`;
+        return;
+      }
+
+      const nameInput = document.getElementById('auth-username').value.trim();
+      const userPassInput = document.getElementById('auth-userpass').value.trim();
+      const roomPassInput = document.getElementById('auth-roompass').value.trim();
+      const errBox = document.getElementById('auth-error');
+      errBox.textContent = '';
+
+      if (!nameInput || !userPassInput || !roomPassInput) {
+        errBox.textContent = 'All fields required (Name, Account Password, Room Code).';
+        return;
+      }
+
+      const lowerName = nameInput.toLowerCase();
+      const userVault = JSON.parse(localStorage.getItem('sec_user_vault') || '{}');
+
+      if (userVault[lowerName]) {
+        if (userVault[lowerName] !== userPassInput) {
+          errBox.textContent = 'Incorrect password for this user.';
+          authLockoutUntil = Date.now() + 3000;
+          playBeep(220, 'sawtooth', 0.25);
+          return;
+        }
+      } else {
+        userVault[lowerName] = userPassInput;
+        localStorage.setItem('sec_user_vault', JSON.stringify(userVault));
+      }
+
+      const targetRoomTopic = pendingSwitchTopic || currentTopic;
+      const expectedPass = channels[targetRoomTopic]?.passcode || 'GV24';
+
+      if (roomPassInput !== expectedPass) {
+        errBox.textContent = 'Incorrect room passcode. Access denied.';
+        authLockoutUntil = Date.now() + 3000;
+        playBeep(220, 'sawtooth', 0.25);
+        document.getElementById('auth-roompass').value = '';
+        return;
+      }
+
+      currentActiveUser = nameInput;
+      unlockedRoomsInRAM.add(targetRoomTopic);
+
+      if (pendingSwitchTopic) {
+        finishChannelSwitch(pendingSwitchTopic);
+      }
+
+      completeLogin();
+      showToast("🛡️ Authentication verified!");
+    }
+
+    function completeLogin() {
+      document.getElementById('auth-overlay').style.display = 'none';
+      document.getElementById('display-username').textContent = currentActiveUser;
+      document.getElementById('message-text').placeholder = `Text ${channels[currentTopic]?.name || '#chat'}...`;
+
+      const kaiBtn = document.getElementById('kai-add-room-btn');
+      if (currentActiveUser && currentActiveUser.toLowerCase() === 'kai') {
+        kaiBtn.style.display = 'inline-flex';
+      } else {
+        kaiBtn.style.display = 'none';
+      }
+
+      updateChannelDropdownUI();
+      renderSavedHistory(currentTopic);
+
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+
+    function handleExplicitLogout(noticeMsg = '') {
+      currentActiveUser = null;
+      unlockedRoomsInRAM.clear();
+
+      document.getElementById('auth-username').value = '';
+      document.getElementById('auth-userpass').value = '';
+      document.getElementById('auth-roompass').value = '';
+      document.getElementById('auth-error').textContent = noticeMsg;
+      document.getElementById('display-username').textContent = 'Not Signed In';
+      document.getElementById('kai-add-room-btn').style.display = 'none';
+      document.getElementById('auth-title-label').textContent = 'Angler Sign In';
+      document.getElementById('auth-room-hint').textContent = 'Enter your name, account password, and room code.';
+      document.getElementById('auth-overlay').style.display = 'flex';
+      renderSavedHistory(currentTopic);
+      if (noticeMsg) showToast("🔒 Locked");
+    }
+
+    function enforceZeroPersistenceStartup() {
+      handleExplicitLogout();
+
+      const seenTutorial = localStorage.getItem('has_seen_tutorial');
+      if (!seenTutorial) {
+        openTutorialModal();
+      }
+    }
+
+    function openTutorialModal() { document.getElementById('tutorial-modal').style.display = 'flex'; }
+    function closeTutorialModal() {
+      document.getElementById('tutorial-modal').style.display = 'none';
+      localStorage.setItem('has_seen_tutorial', 'true');
+    }
+
+    function openTripModal() {
+      if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
+      document.getElementById('trip-modal').style.display = 'flex';
+      const today = new Date().toISOString().split('T')[0];
+      if (!document.getElementById('trip-date').value) document.getElementById('trip-date').value = today;
+    }
+    function closeTripModal() { document.getElementById('trip-modal').style.display = 'none'; }
+
+    function openCatchModal() {
+      if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
+      document.getElementById('catch-modal').style.display = 'flex';
+    }
+    function closeCatchModal() {
+      document.getElementById('catch-modal').style.display = 'none';
+      document.getElementById('catch-species').value = '';
+      document.getElementById('catch-weight').value = '';
+      document.getElementById('catch-spot').value = '';
+      document.getElementById('catch-lure').value = '';
+      document.getElementById('catch-photo-input').value = '';
+      document.getElementById('catch-preview-container').style.display = 'none';
+      document.getElementById('catch-preview-img').src = '';
+      currentCatchPhotoData = null;
+    }
+
+    function openCreateChannelModal() {
+      if (!currentActiveUser || currentActiveUser.toLowerCase() !== 'kai') return;
+      document.getElementById('channel-create-modal').style.display = 'flex';
+      document.getElementById('new-channel-name').value = '';
+      document.getElementById('new-channel-pass').value = '';
+    }
+    function closeCreateChannelModal() {
+      document.getElementById('channel-create-modal').style.display = 'none';
+    }
+
+    function sanitizeSlug(str) {
+      return str.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'room';
+    }
+
+    function createChannelSubmit() {
+      const roomName = document.getElementById('new-channel-name').value.trim();
+      const roomPass = document.getElementById('new-channel-pass').value.trim();
+
+      if (!roomName || !roomPass) {
+        alert("Please enter both a group chat name and a passcode!");
+        return;
+      }
+
+      const slug = sanitizeSlug(roomName);
+      const formattedTitle = roomName.startsWith('#') ? roomName : '#' + roomName;
+
+      const newRoom = {
+        name: formattedTitle,
+        topic: slug,
+        passcode: roomPass
+      };
+
+      channels[slug] = newRoom;
+      localStorage.setItem('app_group_channels', JSON.stringify(channels));
+
+      sendRawMQTTMessage({
+        type: 'room_created_sync',
+        room: newRoom
+      }, 'general-broadcast');
+
+      closeCreateChannelModal();
+      updateChannelDropdownUI();
+      finishChannelSwitch(slug);
+      showToast(`🎉 Room "${formattedTitle}" created!`);
+    }
+
+    function handlePhotoUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 480;
+
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          currentCatchPhotoData = canvas.toDataURL('image/jpeg', 0.65);
+          document.getElementById('catch-preview-img').src = currentCatchPhotoData;
+          document.getElementById('catch-preview-container').style.display = 'flex';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveCatch() {
+      const species = document.getElementById('catch-species').value.trim();
+      const weight = document.getElementById('catch-weight').value.trim() || 'Unmeasured';
+      const spot = document.getElementById('catch-spot').value.trim() || 'Local Water';
+      const lure = document.getElementById('catch-lure').value.trim();
+      const dest = document.querySelector('input[name="catch-dest"]:checked').value;
+
+      if (!species) { alert("Please enter the species!"); return; }
+
+      const catchData = {
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        angler: currentActiveUser,
+        species: species,
+        weight: weight,
+        spot: spot,
+        lure: lure,
+        photo: currentCatchPhotoData,
+        date: new Date().toLocaleDateString()
+      };
+
+      if (dest === 'logbook' || dest === 'both') {
+        const storeKey = `user_catches_${currentActiveUser.toLowerCase()}`;
+        const myCatches = JSON.parse(localStorage.getItem(storeKey) || '[]');
+        myCatches.unshift(catchData);
+        localStorage.setItem(storeKey, JSON.stringify(myCatches));
+      }
+
+      const allCrew = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
+      allCrew.unshift(catchData);
+      localStorage.setItem('all_crew_catches_archive', JSON.stringify(allCrew));
+
+      if (dest === 'chat' || dest === 'both') {
+        const catchText = `🏆 [CATCH LOGGED]\n🐟 Species: ${species}\n⚖️ Weight: ${weight}\n📍 Spot: ${spot}${lure ? `\n🪱 Lure: ${lure}` : ''}`;
+        sendCustomMessage(catchText, false, true, currentCatchPhotoData, catchData);
+      }
+
+      closeCatchModal();
+      showToast(dest === 'logbook' ? "📖 Saved to logbook!" : "🎉 Logged and shared with crew!");
+    }
+
+    function switchLogbookView(view) {
+      activeLogbookView = view;
+      document.getElementById('tab-crew').classList.toggle('active', view === 'crew');
+      document.getElementById('tab-personal').classList.toggle('active', view === 'personal');
+      renderLogbookList();
+    }
+
+    function renderLogbookList() {
+      const container = document.getElementById('logbook-container');
+      container.innerHTML = '';
+
+      let catches = [];
+      if (activeLogbookView === 'crew') {
+        catches = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
+      } else {
+        const userKey = `user_catches_${currentActiveUser ? currentActiveUser.toLowerCase() : 'guest'}`;
+        catches = JSON.parse(localStorage.getItem(userKey) || '[]');
+      }
+
+      if (catches.length === 0) {
+        container.innerHTML = `<div class="logbook-empty">No catches found yet! Click <strong>🐟 Log Catch</strong> to add a fish.</div>`;
+        return;
+      }
+
+      catches.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'logbook-card';
+        const imgHtml = c.photo ? `<img src="${c.photo}" alt="${escapeHtml(c.species)}" />` : `<div style="width:80px;height:80px;background:#1e293b;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:2rem;">🐟</div>`;
+
+        card.innerHTML = `
+          ${imgHtml}
+          <div class="logbook-details">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong>${escapeHtml(c.species)}</strong>
+              <span style="font-size:0.72rem; color:#38bdf8; font-weight:700;">👤 ${escapeHtml(c.angler)}</span>
+            </div>
+            <span>⚖️ Weight: ${escapeHtml(c.weight)}</span>
+            <span>📍 Spot: ${escapeHtml(c.spot)}</span>
+            ${c.lure ? `<span>🪱 Lure: ${escapeHtml(c.lure)}</span>` : ''}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+              <span style="color:#64748b; font-size:0.68rem;">📅 ${escapeHtml(c.date)}</span>
+              <button class="btn" style="padding:2px 6px; font-size:0.65rem; background:#2563eb;" onclick="shareCatchViaSMS('${escapeHtml(c.species)}', '${escapeHtml(c.weight)}', '${escapeHtml(c.spot)}')">💬 Share</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openLogbookModal() {
+      if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
+      renderLogbookList();
+      document.getElementById('logbook-modal').style.display = 'flex';
+    }
+    function closeLogbookModal() { document.getElementById('logbook-modal').style.display = 'none'; }
+
+    function broadcastTrip() {
+      const spot = document.getElementById('trip-spot').value.trim();
+      const date = document.getElementById('trip-date').value;
+      const time = document.getElementById('trip-time').value;
+      const target = document.getElementById('trip-target').value.trim() || 'Any Bite';
+      const cost = document.getElementById('trip-cost').value.trim() || 'Free';
+      const notes = document.getElementById('trip-notes').value.trim();
+
+      if (!spot) { alert("Please enter a spot or lake name!"); return; }
+
+      const tripText = `🎣 [FISHING TRIP PLAN]\n📍 Spot: ${spot}\n📅 Date: ${date} at ${time}\n🎯 Target: ${target}\n💵 Est. Cost: ${cost}${notes ? `\n💡 Tackle: ${notes}` : ''}`;
+      sendCustomMessage(tripText, true);
+      closeTripModal();
+      showToast("📢 Trip planned and broadcasted!");
+    }
+
+    function toggleChatSidebar() {
+      const sidebar = document.getElementById('chat-sidebar');
+      const tab = document.getElementById('collapse-tab');
+      const icon = document.getElementById('collapse-icon');
+
+      const isCollapsed = sidebar.classList.toggle('collapsed');
+      tab.classList.toggle('collapsed-pos', isCollapsed);
+      icon.textContent = isCollapsed ? '▶' : '◀';
+    }
+
+    function getFormattedTimestamp() {
+      const now = new Date();
+      const datePart = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      const timePart = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `${datePart} • ${timePart}`;
+    }
+
+    function initChat() {
+      client = new Paho.MQTT.Client('broker.emqx.io', 8084, clientId);
+
+      client.onConnectionLost = onConnectionLost;
+      client.onMessageArrived = onMessageArrived;
+
+      client.connect({
+        useSSL: true,
+        timeout: 5,
+        keepAliveInterval: 30,
+        cleanSession: false,
+        onSuccess: onConnectSuccess,
+        onFailure: onConnectFailure
+      });
+    }
+
+    function onConnectSuccess() {
+      document.getElementById('conn-dot').className = 'status-dot online';
+      document.getElementById('conn-text').textContent = 'Live Sync';
+      client.subscribe('fishbrain_group_chat/+', { qos: 1 });
+    }
+
+    function onConnectFailure() {
+      document.getElementById('conn-dot').className = 'status-dot offline';
+      document.getElementById('conn-text').textContent = 'Disconnected';
+      setTimeout(initChat, 4000);
+    }
+
+    function onConnectionLost() {
+      document.getElementById('conn-dot').className = 'status-dot offline';
+      document.getElementById('conn-text').textContent = 'Reconnecting...';
+      setTimeout(initChat, 2500);
+    }
+
+    function onMessageArrived(message) {
+      try {
+        const payload = JSON.parse(message.payloadString);
+        const destinationTopic = message.destinationName.replace('fishbrain_group_chat/', '');
+
+        if (payload.action === 'wipe_chat') {
+          if (destinationTopic === currentTopic) {
+            clearChannelHistory(false);
+          }
+          return;
+        }
+
+        if (payload.type === 'room_created_sync' && payload.room) {
+          if (!channels[payload.room.topic]) {
+            channels[payload.room.topic] = payload.room;
+            localStorage.setItem('app_group_channels', JSON.stringify(channels));
+            updateChannelDropdownUI();
+            showToast(`📢 New room available: ${payload.room.name}`);
+          }
+          return;
+        }
+
+        if (payload.roomMeta && !channels[payload.roomMeta.topic]) {
+          channels[payload.roomMeta.topic] = payload.roomMeta;
+          localStorage.setItem('app_group_channels', JSON.stringify(channels));
+          updateChannelDropdownUI();
+        }
+
+        if (payload.catchData) {
+          const allCrew = JSON.parse(localStorage.getItem('all_crew_catches_archive') || '[]');
+          if (!allCrew.some(c => c.id === payload.catchData.id)) {
+            allCrew.unshift(payload.catchData);
+            localStorage.setItem('all_crew_catches_archive', JSON.stringify(allCrew));
+          }
+        }
+
+        if (payload.id && seenMsgIds.has(payload.id)) return;
+        seenMsgIds.add(payload.id);
+
+        const messageChannel = payload.channel || destinationTopic || currentTopic;
+        persistMessageLocally(messageChannel, payload);
+
+        if (messageChannel === currentTopic) {
+          appendMessageToUI(payload);
+        }
+
+        if (currentActiveUser && payload.sender.toLowerCase() !== currentActiveUser.toLowerCase()) {
+          playIncomingDing();
+
+          const roomTitle = channels[messageChannel]?.name || `#${messageChannel}`;
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(`💬 ${payload.sender} (${roomTitle})`, {
+              body: payload.text,
+              icon: "https://fishbrain.com/favicon.ico"
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse payload', e);
+      }
+    }
+
+    function sendRawMQTTMessage(obj, roomTopic = null) {
+      if (!client || !client.isConnected()) return;
+      const targetRoom = sanitizeSlug(roomTopic || currentTopic);
+      const message = new Paho.MQTT.Message(JSON.stringify(obj));
+      message.destinationName = `fishbrain_group_chat/${targetRoom}`;
+      message.qos = 1;
+      client.send(message);
+    }
+
+    function sendCustomMessage(text, isTrip = false, isCatch = false, photoData = null, catchData = null) {
+      if (!currentActiveUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
+      if (!text || !client || !client.isConnected()) return;
+
+      const currentRoomData = channels[currentTopic] || {
+        name: '#' + currentTopic,
+        topic: currentTopic,
+        passcode: 'GV24'
+      };
+
+      const payload = {
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        sender: currentActiveUser,
+        text: text,
+        channel: currentTopic,
+        roomMeta: currentRoomData,
+        isTrip: isTrip,
+        isCatch: isCatch,
+        photo: photoData,
+        catchData: catchData,
+        time: getFormattedTimestamp()
+      };
+
+      sendRawMQTTMessage(payload, currentTopic);
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('message-text');
+      const text = input.value.trim();
+      if (!text) return;
+
+      sendCustomMessage(text);
+      input.value = '';
+    }
+
+    function appendMessageToUI(msg) {
+      const box = document.getElementById('messages-box');
+      const isMe = currentActiveUser && msg.sender.toLowerCase() === currentActiveUser.toLowerCase();
+
+      const group = document.createElement('div');
+      group.className = `message-group ${isMe ? 'mine' : 'theirs'}`;
+
+      const isTrip = msg.isTrip || msg.text.includes('[FISHING TRIP PLAN]');
+      const isCatch = msg.isCatch || msg.text.includes('[CATCH LOGGED]');
+      const formattedText = escapeHtml(msg.text).replace(/\n/g, '<br/>');
+
+      let bubbleClass = 'bubble';
+      if (isTrip) bubbleClass += ' trip-announcement';
+      if (isCatch) bubbleClass += ' catch-card';
+
+      let photoHtml = '';
+      if (msg.photo) {
+        photoHtml = `<img src="${msg.photo}" class="catch-photo" alt="Catch Photo" />`;
+      }
+
+      group.innerHTML = `
+        <span class="msg-sender">${escapeHtml(msg.sender)}</span>
+        <div class="${bubbleClass}">
+          ${formattedText}
+          ${photoHtml}
+        </div>
+        <div class="msg-actions">
+          <button class="action-chip" onclick="shareMessageText('${escapeHtml(msg.text)}')">📲 Forward Text</button>
+        </div>
+        <span class="msg-time">${escapeHtml(msg.time)}</span>
+      `;
+
+      box.appendChild(group);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function persistMessageLocally(channel, msg) {
+      const storeKey = `chat_history_${channel}`;
+      const history = JSON.parse(localStorage.getItem(storeKey) || '[]');
+      history.push(msg);
+      if (history.length > 100) history.shift();
+      localStorage.setItem(storeKey, JSON.stringify(history));
+    }
+
+    function renderSavedHistory(channel) {
+      const box = document.getElementById('messages-box');
+      box.innerHTML = '';
+      seenMsgIds.clear();
+
+      if (channel === 'green-valley-ward-fishing') {
+        permanentIntroMessages.forEach(msg => {
+          seenMsgIds.add(msg.id);
+          appendMessageToUI(msg);
+        });
+      }
+
+      const storeKey = `chat_history_${channel}`;
+      const history = JSON.parse(localStorage.getItem(storeKey) || '[]');
+
+      history.forEach(msg => {
+        if (!seenMsgIds.has(msg.id)) {
+          seenMsgIds.add(msg.id);
+          appendMessageToUI(msg);
+        }
+      });
+    }
+
+    function clearChannelHistory(broadcast = true) {
+      localStorage.removeItem(`chat_history_${currentTopic}`);
+      renderSavedHistory(currentTopic);
+
+      if (broadcast && client && client.isConnected()) {
+        const wipePayload = { action: 'wipe_chat' };
+        sendRawMQTTMessage(wipePayload, currentTopic);
+      }
+    }
+
+    document.getElementById('secret-admin-trigger').addEventListener('dblclick', () => {
+      if (!currentActiveUser || currentActiveUser.toLowerCase() !== 'kai') {
+        alert("🔒 Access Denied: Only Kai has admin authority to clear the chat!");
+        showToast("⛔ Only Kai can clear the chat history!");
+        return;
+      }
+
+      showToast("🛡️ Admin Verified: Welcome, Kai!");
+      const confirmWipe = confirm(`Hi Kai, do you want to delete all user messages in ${channels[currentTopic]?.name}?`);
+      if (confirmWipe) {
+        clearChannelHistory(true);
+      }
+    });
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function openBaroModal() { document.getElementById('baro-modal').style.display = 'flex'; }
+    function closeBaroModal() { document.getElementById('baro-modal').style.display = 'none'; }
+
+    document.getElementById('baro-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'baro-modal') closeBaroModal();
+    });
+
+    function fetchWeatherUserTrigger() {
+      const loc = document.getElementById('location-input').value.trim() || 'Poway';
+      fetchWeather(loc);
+    }
+
+    async function fetchWeather(location = 'Poway') {
+      const statsContainer = document.getElementById('weather-stats');
+      statsContainer.innerHTML = `<span style="color:#94a3b8;">Updating...</span>`;
+
+      try {
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
+        const geoData = await geoRes.json();
+        if (!geoData.results?.length) {
+          statsContainer.innerHTML = `<span style="color:#f87171;">Not found</span>`;
+          return;
+        }
+
+        const { latitude, longitude, name } = geoData.results[0];
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph`);
+        const data = await res.json();
+        const cur = data.current;
+        const pressureInHg = (cur.surface_pressure * 0.02953).toFixed(2);
+
+        const deg = cur.wind_direction_10m;
+        const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        const windDir = directions[Math.round(deg / 45) % 8];
+
+        statsContainer.innerHTML = `
+          <span>📍 <strong>${name}</strong></span>
+          <span>🌡️ <strong style="color:#38bdf8;">${Math.round(cur.temperature_2m)}°F</strong></span>
+          <span>💨 <strong style="color:#38bdf8;">${Math.round(cur.wind_speed_10m)} mph ${windDir}</strong></span>
+          <span class="pressure-container">
+            <span>⏱️ <strong style="color:#38bdf8;">${pressureInHg} inHg</strong></span>
+            <button class="info-bubble-btn" onclick="openBaroModal()" title="Barometer Guide">?</button>
+          </span>
+        `;
+      } catch (err) {
+        statsContainer.innerHTML = `<span style="color:#f87171;">Weather error</span>`;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateChannelDropdownUI();
+      enforceZeroPersistenceStartup();
+      initChat();
+      fetchWeather('Poway');
+    });
+
+    document.getElementById('location-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') fetchWeatherUserTrigger();
+    });
+
+    document.getElementById('auth-roompass').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleAuthSubmit();
+    });
+
+    document.getElementById('message-text').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
